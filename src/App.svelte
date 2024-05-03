@@ -68,7 +68,7 @@
 <svelte:window
 	on:keydown={(ev) => {
 		showTouchControls = false
-		if (ev.key === " ") {
+		if (ev.key === " " || ev.key === "ArrowUp" || ev.key === "w") {
 			game.playerRotate()
 		} else if (ev.key === "ArrowRight" || ev.key === "d") {
 			game.playerMoveRight()
