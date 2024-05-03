@@ -1,0 +1,4 @@
+*.md
+.prettierrc
+*.html
+*.css

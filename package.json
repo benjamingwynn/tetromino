@@ -1,0 +1,27 @@
+{
+	"name": "tetris",
+	"version": "0.0.0",
+	"private": "true",
+	"type": "module",
+	"scripts": {
+		"start": "bests --watch ./esDev.ts",
+		"build": "bests ./esBuild.ts"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"engineStrict": true,
+	"devDependencies": {
+		"@chialab/esbuild-plugin-html": "^0.18.2",
+		"@types/node": "20",
+		"bests": "benjamingwynn/bests",
+		"esbuild": "^0.20.2",
+		"esbuild-svelte": "^0.8.0",
+		"htmlnano": "^2.1.1",
+		"less": "^4.2.0",
+		"prettier-plugin-svelte": "^3.2.3",
+		"svelte": "^4.2.15",
+		"svelte-preprocess": "^5.1.4",
+		"typescript": "^5.4.5"
+	}
+}
