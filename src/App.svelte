@@ -35,7 +35,7 @@
 	let nextTouchDirectionTick: number | undefined = undefined
 	const touchSpeedUp = () => {
 		game.playerSpeedUp()
-		nextTouchSpeedUp = requestAnimationFrame(touchSpeedUp)
+		nextTouchSpeedUp = setTimeout(touchSpeedUp, 16.7 * 4)
 	}
 	const touchDirectionTick = () => {
 		if (touchDirection === "moveLeft") {
@@ -58,7 +58,7 @@
 
 	const touchStop = () => {
 		touchDirection = undefined
-		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
+		if (nextTouchDirectionTick) clearTimeout(nextTouchDirectionTick)
 	}
 
 	$: localStorage.highScore = _highScore
@@ -104,10 +104,10 @@
 			touchSpeedUp()
 		}}
 		on:touchend={() => {
-			if (nextTouchSpeedUp) cancelAnimationFrame(nextTouchSpeedUp)
+			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 		}}
 		on:touchcancel={() => {
-			if (nextTouchSpeedUp) cancelAnimationFrame(nextTouchSpeedUp)
+			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 		}}
 	/>
 	<div class="stats">
