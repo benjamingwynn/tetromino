@@ -4,6 +4,7 @@
 	import Score from "./components/Score.svelte"
 	import HighScore from "./components/HighScore.svelte"
 	import {Game} from "./tetris/Game"
+	import {version} from "../package.json"
 	import "./font/RedAlert.css"
 
 	let canvas: HTMLCanvasElement
@@ -126,7 +127,7 @@
 	</div>
 	<div class="about">
 		<div class="about-inner">
-			<h4>Benjamin's Tetris</h4>
+			<h4>Benjamin's Tetris v{version}</h4>
 			<h5>A mostly competent port of tetris written by Benjamin Gwynn</h5>
 			{#if !showTouchControls}
 				<h5>Move with A/D or left/right arrows. Down/S to speed up</h5>
