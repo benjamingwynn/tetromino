@@ -247,8 +247,8 @@
 		image-rendering: optimize-contrast;
 		-webkit-font-smoothing: none;
 		image-rendering: -moz-crisp-edges;
-		image-rendering: pixelated;
 		image-rendering: crisp-edges;
+		image-rendering: pixelated;
 	}
 
 	.stats {
