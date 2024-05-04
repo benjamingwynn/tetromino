@@ -4,9 +4,6 @@ import RandomNumberGenerator from "mersenne-twister"
 import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./tetrominoes.ts"
 // import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./debug_tetrominoes.ts"
 
-// @ts-expect-error allow falling back to vendor prefixed API
-const AudioContext = window.AudioContext ?? window["webkitAudioContext"]
-
 const noop = () => undefined
 
 function sleep(ms: number) {
@@ -129,6 +126,8 @@ export class Game {
 		// setup audio
 		if (enableAudio) {
 			try {
+				// @ts-expect-error allow falling back to vendor prefixed API
+				const AudioContext = window.AudioContext ?? window["webkitAudioContext"]
 				this.audioCtx = new AudioContext({
 					sampleRate: 8_000, // nice and crunchy
 				})
@@ -592,7 +591,7 @@ export class Game {
 		if (this.drawDebug) {
 			this.ctx.fillStyle = "white"
 			const fontSize = 9
-			this.ctx.font = fontSize + "px Hack"
+			this.ctx.font = fontSize + "px RedAlert"
 
 			for (let i = 0; i < debug.length; i++) {
 				this.ctx.fillText(debug[i], 2, fontSize * (i + 1))
