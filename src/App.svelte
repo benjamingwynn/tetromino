@@ -16,6 +16,7 @@
 	let _highScore: number = localStorage.highScore ? +localStorage.highScore : 0
 	let _gameOver: boolean = false
 	let showTouchControls = !!navigator.maxTouchPoints
+	let lockTouchRetry = false
 
 	const validateLocalReplay = () => {
 		const game2 = new Game({
@@ -58,6 +59,17 @@
 			onUpdate: ({score, gameOver}) => {
 				_score = score
 				if (gameOver && !_gameOver) {
+					//
+					// on game over...
+					//
+
+					// lock the retry button for a small white so we don't accidentally click it
+					lockTouchRetry = true
+					setTimeout(() => {
+						lockTouchRetry = false
+					}, 3000)
+
+					// validate the game locally
 					validateLocalReplay()
 				}
 				_gameOver = gameOver
@@ -194,7 +206,11 @@
 			tabindex="-1"
 			on:touchend={touchStop}
 			on:touchcancel={touchStop}
+			disabled={lockTouchRetry}
 			on:touchstart|preventDefault={() => {
+				if (lockTouchRetry) {
+					return
+				}
 				newGame()
 			}}>reset</button
 		>
@@ -364,6 +380,10 @@
 			&.rotate {
 				border-left: solid thin rgba(255, 255, 255, 0.3s);
 				border-right: solid thin rgba(255, 255, 255, 0.3s);
+			}
+
+			&[disabled] {
+				color: grey;
 			}
 		}
 	}
