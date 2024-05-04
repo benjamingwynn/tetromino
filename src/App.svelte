@@ -3,6 +3,7 @@
 	import {onMount} from "svelte"
 	import Score from "./components/Score.svelte"
 	import HighScore from "./components/HighScore.svelte"
+	import TouchButton from "./components/TouchButton.svelte"
 	import {Game} from "./tetris/Game"
 	import {version} from "../package.json"
 	import "./font/RedAlert.css"
@@ -161,18 +162,7 @@
 			}}>reset</button
 		>
 	{:else}
-		<button
-			on:contextmenu|preventDefault
-			type="button"
-			tabindex="-1"
-			on:touchend={touchStop}
-			on:touchcancel={touchStop}
-			on:touchstart|preventDefault={() => {
-				game.playerMoveLeft()
-				touchDirection = "moveLeft"
-				nextTouchDirectionTick = setTimeout(touchDirectionTick, 16.7 * 4)
-			}}>&lt;</button
-		>
+		<TouchButton onAction={() => game.playerMoveLeft()}>&lt;</TouchButton>
 		<button
 			class="rotate"
 			on:contextmenu|preventDefault
@@ -184,18 +174,7 @@
 				game.playerRotate()
 			}}>spin</button
 		>
-		<button
-			on:contextmenu|preventDefault
-			type="button"
-			tabindex="-1"
-			on:touchend={touchStop}
-			on:touchcancel={touchStop}
-			on:touchstart|preventDefault={() => {
-				game.playerMoveRight()
-				touchDirection = "moveRight"
-				nextTouchDirectionTick = setTimeout(touchDirectionTick, 16.7 * 4)
-			}}>&gt;</button
-		>
+		<TouchButton onAction={() => game.playerMoveRight()}>&gt;</TouchButton>
 	{/if}
 </div>
 
