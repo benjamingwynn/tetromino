@@ -28,7 +28,7 @@
 		const success = game2.replay(game.gameLog, game.getTicks())
 		const score = game2.getScore()
 		if (success && score === _score) {
-			console.log("**** SUCCESS!! ****")
+			// console.log("**** SUCCESS!! ****")
 			canvas.style.borderColor = "green"
 			altCanvas.style.borderColor = "green"
 		} else if (!success && score === _score) {
@@ -201,7 +201,7 @@
 				type="button"
 				on:click={() => {
 					newGame()
-					altCanvas.hidden = true
+					// altCanvas.hidden = true
 				}}>(R)eset and start new game</button
 			>
 		{/if}
