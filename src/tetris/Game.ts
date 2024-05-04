@@ -341,7 +341,7 @@ export class Game {
 
 				// score points:
 				const SCORE_BASE = 100
-				const SCORE_MULTIPLIER = 0.1 // + 10% for every in a row
+				const SCORE_MULTIPLIER = 0.5 // + 50% for every line in-a-row
 				if (this.enableAsyncAnimatedScoring) {
 					;(async () => {
 						let multiplier = 1
