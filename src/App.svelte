@@ -9,6 +9,7 @@
 	import "./font/RedAlert.css"
 
 	let canvas: HTMLCanvasElement
+	let altCanvas: HTMLCanvasElement
 	let previewCanvas: HTMLCanvasElement
 	let game: Game
 	let _score: number = 0
@@ -16,19 +17,55 @@
 	let _gameOver: boolean = false
 	let showTouchControls = !!navigator.maxTouchPoints
 
+	const validateLocalReplay = () => {
+		const game2 = new Game({
+			canvas: altCanvas,
+			previewCanvas,
+			enableAudio: false,
+			seed: game.seed,
+		})
+		game2.playerToggleDebug()
+		const success = game2.replay(game.gameLog, game.getTicks() + 1)
+		const score = game2.getScore()
+		if (success && score === _score) {
+			console.log("**** SUCCESS!! ****")
+			canvas.style.borderColor = "green"
+			altCanvas.style.borderColor = "green"
+		} else if (!success && score === _score) {
+			console.warn("**** NON-SUCCESS BUT MATCHING SCORE!! ****")
+			canvas.style.borderColor = "orange"
+			altCanvas.style.borderColor = "orange"
+		} else {
+			console.error("**** FAILURE!! ****")
+			canvas.style.borderColor = "red"
+			altCanvas.style.borderColor = "red"
+		}
+		console.log("game2=", game2)
+		window.game2 = game2
+		requestAnimationFrame(() => {
+			game2.destroy()
+		})
+	}
+
 	const newGame = () => {
+		canvas.style.borderColor = ""
 		if (game) game.destroy()
 		_score = 0
 		_gameOver = false
-		game = new Game(
+		game = new Game({
 			canvas,
-			({score, gameOver}) => {
+			enableAudio: true,
+			onUpdate: ({score, gameOver}) => {
 				_score = score
+				if (gameOver && !_gameOver) {
+					validateLocalReplay()
+				}
 				_gameOver = gameOver
 				if (_score > _highScore) _highScore = _score
 			},
-			previewCanvas
-		)
+			previewCanvas,
+		})
+		game.play()
 		window.game = game
 	}
 
@@ -86,6 +123,8 @@
 		} else if (ev.key === "F1") {
 			// pause
 			game.playerToggleDebug()
+		} else if (ev.key === "F2") {
+			altCanvas.hidden = !altCanvas.hidden
 		} else {
 			console.warn("unregistered key:", ev.key)
 		}
@@ -105,7 +144,10 @@
 	}}
 >
 	<!-- <h1>Tetris</h1> -->
-	<canvas width="100px" height="200px" bind:this={canvas} />
+	<div class="game">
+		<canvas width="100px" height="200px" bind:this={canvas} />
+		<canvas width="100px" height="200px" bind:this={altCanvas} hidden />
+	</div>
 	<div class="stats">
 		<div class="scoreboard">
 			<h5>TOP</h5>
@@ -138,6 +180,7 @@
 				type="button"
 				on:click={() => {
 					newGame()
+					altCanvas.hidden = true
 				}}>(R)eset and start new game</button
 			>
 		{/if}
@@ -211,7 +254,12 @@
 		}
 	}
 
+	.game {
+		display: flex;
+	}
+
 	canvas {
+		margin: auto;
 		border: solid gray 3px;
 		height: 100%;
 		margin: auto;
