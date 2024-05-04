@@ -592,8 +592,8 @@ export class Game {
 
 		// draw debug text
 		if (this.drawDebug) {
-			this.ctx.fillStyle = "white"
-			const fontSize = 9
+			this.ctx.fillStyle = "rgba(255,255,255,0.5)"
+			const fontSize = 12
 			this.ctx.font = fontSize + "px RedAlert"
 
 			for (let i = 0; i < debug.length; i++) {
