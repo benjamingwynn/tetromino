@@ -92,26 +92,20 @@
 	}}
 />
 <main
-	on:touchstart={() => {
+	on:contextmenu|preventDefault
+	on:touchstart|preventDefault={() => {
 		showTouchControls = true
+		touchSpeedUp()
+	}}
+	on:touchend={() => {
+		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
+	}}
+	on:touchcancel={() => {
+		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 	}}
 >
 	<!-- <h1>Tetris</h1> -->
-	<canvas
-		width="100px"
-		height="200px"
-		bind:this={canvas}
-		on:contextmenu|preventDefault
-		on:touchstart|preventDefault={() => {
-			touchSpeedUp()
-		}}
-		on:touchend={() => {
-			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
-		}}
-		on:touchcancel={() => {
-			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
-		}}
-	/>
+	<canvas width="100px" height="200px" bind:this={canvas} />
 	<div class="stats">
 		<div class="scoreboard">
 			<h5>TOP</h5>
