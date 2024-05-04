@@ -71,7 +71,7 @@
 					}, 3000)
 
 					// validate the game locally
-					// validateLocalReplay()
+					validateLocalReplay()
 				}
 
 				_gameOver = gameOver
@@ -82,13 +82,6 @@
 		game.play()
 		window.game = game
 	}
-
-	const frame = () => {
-		// DEV: always validate
-		validateLocalReplay()
-		requestAnimationFrame(frame)
-	}
-	requestAnimationFrame(frame)
 
 	let touchDirection: undefined | "moveLeft" | "rotate" | "moveRight" | "speedUp" = undefined
 	let nextTouchSpeedUp: number | undefined = undefined
@@ -170,7 +163,7 @@
 	<!-- <h1>Tetris</h1> -->
 	<div class="game">
 		<canvas width="100px" height="200px" bind:this={canvas} />
-		<canvas width="100px" height="200px" bind:this={altCanvas} />
+		<canvas width="100px" height="200px" bind:this={altCanvas} hidden />
 	</div>
 	<div class="stats">
 		<div class="scoreboard">

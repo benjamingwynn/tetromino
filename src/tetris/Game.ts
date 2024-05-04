@@ -168,7 +168,7 @@ export class Game {
 		let n = 0
 		let c = 0
 		while (!this.gameOver) {
-			if (n === max) {
+			if (n > max) {
 				// console.warn("WARNING: hit maximum during replay before gameOver, bailing!")
 				return false
 			}
