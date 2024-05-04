@@ -21,7 +21,6 @@
 	const validateLocalReplay = () => {
 		const game2 = new Game({
 			canvas: altCanvas,
-			previewCanvas,
 			enableAudio: false,
 			seed: game.seed,
 		})
