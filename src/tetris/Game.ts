@@ -470,9 +470,9 @@ export class Game {
 			this.compressGameLog()
 		}
 
+		this.tickCounter++
 		this.moveLog = []
 		this.gameLog[this.tickCounter] = this.moveLog
-		this.tickCounter++
 
 		// give tetromino if we don't have one
 		if (!this.tetromino && this.tickCounter >= this.tickLostTetromino + this.giveTetrominoInterval) {
