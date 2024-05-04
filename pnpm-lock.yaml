@@ -8,6 +8,9 @@ devDependencies:
   '@chialab/esbuild-plugin-html':
     specifier: ^0.18.2
     version: 0.18.2(htmlnano@2.1.1)
+  '@types/mersenne-twister':
+    specifier: ^1.1.7
+    version: 1.1.7
   '@types/node':
     specifier: '20'
     version: 20.12.8
@@ -26,6 +29,9 @@ devDependencies:
   less:
     specifier: ^4.2.0
     version: 4.2.0
+  mersenne-twister:
+    specifier: ^1.1.0
+    version: 1.1.0
   prettier-plugin-svelte:
     specifier: ^3.2.3
     version: 3.2.3(prettier@3.2.5)(svelte@4.2.15)
@@ -351,6 +357,10 @@ packages:
 
   /@types/estree@1.0.5:
     resolution: {integrity: sha512-/kYRxGDLWzHOB7q+wtSUQlFrtcdUccpfy+X+9iMBpHK8QLLhx2wIPYuS5DYtR9Wa/YlZAbIovy7qVdB1Aq6Lyw==}
+    dev: true
+
+  /@types/mersenne-twister@1.1.7:
+    resolution: {integrity: sha512-WC4CfMTR59ov9HxLxLg5bjgbX/MljzC9yEp+x8LJze9Y58hTVz6fuNdojxzE8shzQDWoe4id6rhgi4Sfk1G4Wg==}
     dev: true
 
   /@types/node@20.12.8:
@@ -792,6 +802,10 @@ packages:
 
   /mdn-data@2.0.30:
     resolution: {integrity: sha512-GaqWWShW4kv/G9IEucWScBx9G1/vsFZZJUO+tD26M8J8z3Kw5RDQjaoZe03YAClgeS/SWPOcb4nkFBTEi5DUEA==}
+    dev: true
+
+  /mersenne-twister@1.1.0:
+    resolution: {integrity: sha512-mUYWsMKNrm4lfygPkL3OfGzOPTR2DBlTkBNHM//F6hGp8cLThY897crAlk3/Jo17LEOOjQUrNAx6DvgO77QJkA==}
     dev: true
 
   /mime@1.6.0:

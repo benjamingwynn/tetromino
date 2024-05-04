@@ -1,5 +1,6 @@
 /** @format */
 
+import RandomNumberGenerator from "mersenne-twister"
 import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./tetrominoes.ts"
 // import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./debug_tetrominoes.ts"
 
@@ -23,6 +24,8 @@ export class Game {
 	private rows = 20
 	private columns = 10
 	private nextFrame?: number
+
+	private seed = Math.floor(Date.now() / 60_000)
 
 	/**
 	 * The grid of placed items.
@@ -295,7 +298,14 @@ export class Game {
 		}
 	}
 
-	private nextTetrominoType = tetrominoKeys[Math.floor(Math.random() * tetrominoKeys.length)] as TetrominoType
+	private randomGenerator = new RandomNumberGenerator(this.seed)
+
+	private getNextTetrominoType() {
+		const random = () => this.randomGenerator.random()
+		return tetrominoKeys[Math.floor(random() * tetrominoKeys.length)] as TetrominoType
+	}
+
+	private nextTetrominoType = this.getNextTetrominoType()
 
 	public tick = (now: number) => {
 		if (this.paused) {
@@ -311,7 +321,7 @@ export class Game {
 			if (this.timeLostTetromino && !this.tetromino && now >= this.timeLostTetromino + this.giveTetrominoInterval) {
 				// const shape = "O"
 				const shape = this.nextTetrominoType
-				this.nextTetrominoType = tetrominoKeys[Math.floor(Math.random() * tetrominoKeys.length)] as TetrominoType
+				this.nextTetrominoType = this.getNextTetrominoType()
 
 				// draw the preview for the next shape
 				if (this.previewCtx && this.previewCanvas) {
@@ -391,6 +401,7 @@ export class Game {
 			this.gameOver ? "GAME OVER" : "Playing",
 			this.animateRow?.join(",") ?? "-",
 			"Given: " + this.giveCount,
+			"Seed: " + this.seed,
 			"Interval:" + this.stepInterval,
 		]
 		if (tetromino) {
