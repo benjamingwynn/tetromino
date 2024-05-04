@@ -5,7 +5,8 @@
 	"type": "module",
 	"scripts": {
 		"start": "bests --watch ./esDev.ts",
-		"build": "bests ./esBuild.ts"
+		"build": "bests ./esBuild.ts",
+		"deploy": "pnpm version patch && git push && git push --tags"
 	},
 	"engines": {
 		"node": ">=20"
