@@ -34,6 +34,7 @@ export class Game {
 	private rows = 20
 	private columns = 10
 	private nextFrame?: number
+	public muteSounds = false
 
 	public readonly seed: number
 
@@ -215,6 +216,7 @@ export class Game {
 	}
 
 	public soundBeep(note = 0, msDelay: number = 0, msDuration: number = 100, pitch = 0) {
+		if (this.muteSounds) return
 		try {
 			const audioCtx = this.audioCtx
 			if (!audioCtx || !this.oscillatorGainNode) throw "audio not available"
@@ -559,6 +561,7 @@ export class Game {
 			"Interval:" + this.stepInterval,
 			"Tick: " + this.tickCounter,
 			"Drawn: " + Date.now(),
+			this.muteSounds ? "MUTE" : this.audioCtx ? "SOUND ON" : "SND N/A",
 		]
 		if (tetromino) {
 			const [type, x, y, rot] = tetromino

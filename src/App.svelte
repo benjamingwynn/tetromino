@@ -141,6 +141,9 @@
 		} else if (ev.key === "p") {
 			// pause
 			game.playerPause()
+		} else if (ev.key === "m") {
+			// mute
+			game.muteSounds = !game.muteSounds
 		} else if (ev.key === "F1") {
 			// pause
 			game.playerToggleDebug()
