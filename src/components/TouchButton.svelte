@@ -2,7 +2,7 @@
 <script lang="ts">
 	export let onAction: () => void
 
-	export let delay: number = 150
+	export let delay: number = 200
 	export let interval: number = 16.7 * 4
 	let nextTick: number | undefined = undefined
 	let nextDelay: number | undefined = undefined
