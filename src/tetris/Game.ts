@@ -201,16 +201,16 @@ export class Game {
 			this.tick()
 		}
 		const timeTaken = performance.now() - t
-		console.log(
-			"Replayed",
-			c,
-			"moves over",
-			this.tickCounter,
-			"ticks in",
-			timeTaken,
-			"ms",
-			`(${Math.floor(this.tickCounter / (timeTaken / 1000))} ticks/sec)`
-		)
+		// console.log(
+		// 	"Replayed",
+		// 	c,
+		// 	"moves over",
+		// 	this.tickCounter,
+		// 	"ticks in",
+		// 	timeTaken,
+		// 	"ms",
+		// 	`(${Math.floor(this.tickCounter / (timeTaken / 1000))} ticks/sec)`
+		// )
 		return true
 	}
 
