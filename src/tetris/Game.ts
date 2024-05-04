@@ -67,6 +67,7 @@ export class Game {
 	private audioCtx?: AudioContext
 	private oscillatorGainNode?: GainNode
 	private previewCtx?: CanvasRenderingContext2D
+	private tickInterval: ReturnType<typeof setTimeout>
 	// private merger: ChannelMergerNode
 
 	constructor(
@@ -82,6 +83,10 @@ export class Game {
 				this.layout()
 			})
 		}, 15)
+
+		this.tickInterval = setInterval(() => {
+			this.tick(Date.now())
+		}, 20)
 
 		const ctx = canvas.getContext("2d")
 		if (!ctx) throw new Error("Canvas is not available on this platform.")
@@ -161,9 +166,9 @@ export class Game {
 		this.ctx.strokeRect((x + 0) * size + 2, y * size + 2, size - 4, size - 4)
 	}
 
-	private lastStep = Date.now()
-	private minStepInterval = 16.7 * 3 // approx 3 frames
-	private startStepInterval = 800
+	private lastStep = 0
+	private minStepInterval = 3
+	private startStepInterval = 50
 	private stepInterval = this.startStepInterval
 	private giveTetrominoInterval = 250
 	private timeLostTetromino: number | undefined = Date.now()
@@ -177,6 +182,17 @@ export class Game {
 	private lastX = 0
 	private drawDebug = false
 	private giveCount = 0
+	private moveLog: [number, "<" | ">" | "r"][] = []
+	private gameLog: Array<typeof this.moveLog> = []
+
+	private pushToGameLog() {
+		this.moveLog = []
+		this.gameLog.push(this.moveLog)
+	}
+
+	private pushToMoveLog(move: "<" | ">" | "r") {
+		this.moveLog.push([this.tickCounter, move])
+	}
 
 	private step = () => {
 		const tetromino = this.tetromino
@@ -307,6 +323,7 @@ export class Game {
 
 	private nextTetrominoType = this.getNextTetrominoType()
 
+	private tickCounter = 0
 	public tick = (now: number) => {
 		if (this.paused) {
 			return
@@ -315,6 +332,7 @@ export class Game {
 			// disable game updates while animation running
 			return
 		}
+		this.tickCounter++
 
 		if (!this.gameOver) {
 			// give tetromino if we don't have one
@@ -355,26 +373,25 @@ export class Game {
 				const maxX = this.getTetrominoXMax(tetromino)
 				if (tetromino[1] > maxX) tetromino[1] = maxX
 				this.tetromino = tetromino
+				this.pushToGameLog()
 				this.giveCount++
 
 				// **speed up the game**
 				if (this.giveCount % 5 === 0) {
-					this.stepInterval = this.startStepInterval - this.score / 10
+					this.stepInterval = Math.floor(this.startStepInterval - this.score / 250)
 					this.stepInterval = Math.max(this.minStepInterval, this.stepInterval)
 				}
 			}
 		}
-		if (now >= this.lastStep + this.stepInterval) {
+		if (this.tickCounter >= this.lastStep + this.stepInterval) {
 			this.step()
-			this.lastStep = Date.now()
+			this.lastStep = this.tickCounter
 		}
 	}
 
 	public render = () => {
 		this.nextFrame = undefined
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
-
-		this.tick(Date.now())
 
 		// draw the grid
 		for (let i = 0; i < this.grid.length; i++) {
@@ -403,6 +420,7 @@ export class Game {
 			"Given: " + this.giveCount,
 			"Seed: " + this.seed,
 			"Interval:" + this.stepInterval,
+			"Tick: " + this.tickCounter,
 		]
 		if (tetromino) {
 			const [type, x, y, rot] = tetromino
@@ -468,6 +486,7 @@ export class Game {
 		if (this.nextFrame) {
 			cancelAnimationFrame(this.nextFrame)
 		}
+		clearInterval(this.tickInterval)
 	}
 
 	/** @public */
@@ -490,7 +509,11 @@ export class Game {
 
 			// fix X position
 			const maxX = this.getTetrominoXMax(tetromino)
-			if (tetromino[1] > maxX) tetromino[1] = maxX
+			if (tetromino[1] > maxX) {
+				tetromino[1] = maxX
+			} else {
+				this.pushToMoveLog("r")
+			}
 		}
 	}
 
@@ -512,11 +535,16 @@ export class Game {
 				console.warn("not moving right")
 				return
 			}
+
 			tetromino[1]++
 
 			// fix X position
 			const maxX = this.getTetrominoXMax(tetromino)
-			if (tetromino[1] > maxX) tetromino[1] = maxX
+			if (tetromino[1] > maxX) {
+				tetromino[1] = maxX
+			} else {
+				this.pushToMoveLog(">")
+			}
 		}
 	}
 
@@ -531,10 +559,15 @@ export class Game {
 				console.warn("not moving left")
 				return
 			}
+
 			tetromino[1]--
 
 			// fix X position
-			if (tetromino[1] <= 0) tetromino[1] = 0
+			if (tetromino[1] <= 0) {
+				tetromino[1] = 0
+			} else {
+				this.pushToMoveLog("<")
+			}
 		}
 	}
 
