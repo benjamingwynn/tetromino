@@ -39,6 +39,7 @@
 			console.error("**** FAILURE!! ****")
 			canvas.style.borderColor = "red"
 			altCanvas.style.borderColor = "red"
+			altCanvas.hidden = false
 		}
 		console.log("game2=", game2)
 		window.game2 = game2
@@ -48,6 +49,7 @@
 	}
 
 	const newGame = () => {
+		altCanvas.hidden = true
 		canvas.style.borderColor = ""
 		if (game) game.destroy()
 		_score = 0
