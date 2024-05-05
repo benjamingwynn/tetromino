@@ -272,7 +272,7 @@ export class Game {
 	private stepInterval = this.startStepInterval
 	private giveTetrominoInterval = 13
 	private tickLostTetromino: number = 0
-	private paused = false
+	public paused = false
 	private gameOver = false
 	private score = 0
 
@@ -590,11 +590,20 @@ export class Game {
 		}
 		this.debugBoxes = []
 
+		if (this.paused) {
+			const fontSize = 25
+			this.ctx.font = fontSize + "px RedAlert"
+			this.ctx.fillStyle = "black"
+			this.ctx.fillText("PAUSED", 2, fontSize)
+			this.ctx.fillStyle = "white"
+			this.ctx.fillText("PAUSED", 3, fontSize + 1)
+		}
+
 		// draw debug text
 		if (this.drawDebug) {
-			this.ctx.fillStyle = "rgba(255,255,255,0.5)"
 			const fontSize = 12
 			this.ctx.font = fontSize + "px RedAlert"
+			this.ctx.fillStyle = "rgba(255,255,255,0.5)"
 
 			for (let i = 0; i < debug.length; i++) {
 				this.ctx.fillText(debug[i], 2, fontSize * (i + 1))
@@ -716,10 +725,6 @@ export class Game {
 		this.step()
 	}
 
-	/** @public */
-	public playerPause() {
-		this.paused = !this.paused
-	}
 	/** @public */
 	public playerToggleDebug() {
 		this.drawDebug = !this.drawDebug

@@ -17,6 +17,7 @@
 	let _gameOver: boolean = false
 	let showTouchControls = !!navigator.maxTouchPoints
 	let lockTouchRetry = false
+	let showTouchSettings = false
 
 	const validateLocalReplay = () => {
 		const game2 = new Game({
@@ -39,7 +40,7 @@
 			console.error("**** FAILURE!! ****")
 			canvas.style.borderColor = "red"
 			altCanvas.style.borderColor = "red"
-			// altCanvas.hidden = false
+			altCanvas.hidden = false
 		}
 		// console.log("game2=", game2)
 		window.game2 = game2
@@ -114,7 +115,17 @@
 		if (nextTouchDirectionTick) clearTimeout(nextTouchDirectionTick)
 	}
 
+	let paused = false
+	let gameMute = !!localStorage.mute
+	let touchControlSwap = !!localStorage.touchControlSwap
+	$: game && (game.muteSounds = gameMute)
+	$: game && (game.paused = paused || showTouchSettings)
+	$: localStorage.mute = gameMute ? 1 : ""
+	$: localStorage.touchControlSwap = touchControlSwap ? 1 : ""
 	$: localStorage.highScore = _highScore
+
+	// make sure we don't get stuck in the settings screen
+	$: if (!showTouchControls) showTouchSettings = false
 </script>
 
 <svelte:window
@@ -133,7 +144,7 @@
 			newGame()
 		} else if (ev.key === "p") {
 			// pause
-			game.playerPause()
+			paused = !paused
 		} else if (ev.key === "m") {
 			// mute
 			game.muteSounds = !game.muteSounds
@@ -147,93 +158,217 @@
 		}
 	}}
 />
-<main
-	on:contextmenu|preventDefault
-	on:touchstart|preventDefault={() => {
-		showTouchControls = true
-		touchSpeedUp()
-	}}
-	on:touchend={() => {
-		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
-	}}
-	on:touchcancel={() => {
-		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
-	}}
->
-	<!-- <h1>Tetris</h1> -->
-	<div class="game">
-		<canvas width="100px" height="200px" bind:this={canvas} />
-		<canvas width="100px" height="200px" bind:this={altCanvas} hidden />
-	</div>
-	<div class="stats">
-		<div class="scoreboard">
-			<h5>TOP</h5>
-			<HighScore score={_highScore} />
+
+<div class="app primary" hidden={showTouchSettings}>
+	<main
+		on:contextmenu|preventDefault
+		on:touchstart|preventDefault={() => {
+			showTouchControls = true
+			if (touchControlSwap) {
+				game.playerRotate()
+			} else {
+				touchSpeedUp()
+			}
+		}}
+		on:touchend={() => {
+			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
+		}}
+		on:touchcancel={() => {
+			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
+		}}
+	>
+		<!-- <h1>Tetris</h1> -->
+		<div class="game">
+			<canvas width="100px" height="200px" bind:this={canvas} />
+			<canvas width="100px" height="200px" bind:this={altCanvas} hidden />
 		</div>
-		<div class="scoreboard">
-			<h5>SCORE</h5>
-			<Score score={_score} />
-		</div>
-		<div class="scoreboard">
-			<h5>NEXT</h5>
-			<canvas width="30px" height="30px" bind:this={previewCanvas}></canvas>
-		</div>
-	</div>
-	<div class="about">
-		<div class="about-inner">
-			<h4>Benjamin's Tetris v{version}</h4>
-			<h5>A mostly competent port of tetris written by Benjamin Gwynn</h5>
+		<div class="stats">
+			<div class="scoreboard">
+				<h5>TOP</h5>
+				<HighScore score={_highScore} />
+			</div>
+			<div class="scoreboard">
+				<h5>SCORE</h5>
+				<Score score={_score} />
+			</div>
+			<div class="scoreboard">
+				<h5>NEXT</h5>
+				<canvas width="30px" height="30px" bind:this={previewCanvas}></canvas>
+			</div>
 			{#if !showTouchControls}
-				<h5>Move with A/D or left/right arrows. Down/S to speed up</h5>
+				<div class="cursorControls">
+					<button
+						on:contextmenu|preventDefault
+						type="button"
+						class="action"
+						class:active={paused}
+						tabindex="-1"
+						on:click={() => {
+							paused = !paused //
+						}}>{paused ? "RESUME" : "(P)AUSE"}</button
+					>
+					<button
+						on:contextmenu|preventDefault
+						type="button"
+						class="action"
+						class:active={gameMute}
+						tabindex="-1"
+						on:click={() => {
+							gameMute = !gameMute
+						}}>{gameMute ? "UNMUTE" : "MUTE"}</button
+					>
+				</div>
 			{/if}
 		</div>
+		<div class="about">
+			<div class="about-inner">
+				<h4>Benjamin's Tetris v{version}</h4>
+				<h5>A mostly competent port of tetris written by Benjamin Gwynn</h5>
+				{#if !showTouchControls}
+					<h5>Move with A/D or left/right arrows, down/S to speed up, up/W/space to spin.</h5>
+				{/if}
+			</div>
+		</div>
+	</main>
+
+	<div class="touchFloat left" hidden={!showTouchControls}>
+		<button
+			on:contextmenu|preventDefault
+			type="button"
+			tabindex="-1"
+			class="action"
+			class:active={paused}
+			on:touchend={touchStop}
+			on:touchcancel={touchStop}
+			on:touchstart|preventDefault={() => {
+				paused = !paused //
+			}}>{paused ? "RESUME" : "PAUSE"}</button
+		>
+		<button
+			on:contextmenu|preventDefault
+			type="button"
+			tabindex="-1"
+			class="action"
+			class:active={gameMute}
+			on:touchend={touchStop}
+			on:touchcancel={touchStop}
+			on:touchstart|preventDefault={() => {
+				gameMute = !gameMute
+			}}>{gameMute ? "UNMUTE" : "MUTE"}</button
+		>
 	</div>
-</main>
-{#if _gameOver}
-	<div class="youDied">
-		<h1>GAME OVER</h1>
-		{#if !showTouchControls}
+
+	<div class="touchFloat right" hidden={!showTouchControls}>
+		<button
+			on:contextmenu|preventDefault
+			class="action"
+			type="button"
+			tabindex="-1"
+			on:touchend={touchStop}
+			on:touchcancel={touchStop}
+			on:touchstart|preventDefault={() => {
+				//
+				showTouchSettings = !showTouchSettings
+				// game.playerToggleDebug()
+			}}>SETTINGS</button
+		>
+	</div>
+
+	{#if _gameOver}
+		<div class="youDied">
+			<h1>GAME OVER</h1>
+			{#if !showTouchControls}
+				<button
+					type="button"
+					on:click={() => {
+						newGame()
+						// altCanvas.hidden = true
+					}}>(R)eset and start new game</button
+				>
+			{/if}
+		</div>
+	{/if}
+	<div class="touchControls" hidden={!showTouchControls}>
+		{#if _gameOver}
 			<button
+				on:contextmenu|preventDefault
 				type="button"
-				on:click={() => {
+				tabindex="-1"
+				on:touchend={touchStop}
+				on:touchcancel={touchStop}
+				disabled={lockTouchRetry}
+				on:touchstart|preventDefault={() => {
+					if (lockTouchRetry) {
+						return
+					}
 					newGame()
-					// altCanvas.hidden = true
-				}}>(R)eset and start new game</button
+				}}>reset</button
 			>
+		{:else}
+			<TouchButton onAction={() => game.playerMoveLeft()}>&lt;</TouchButton>
+			{#if touchControlSwap}
+				<TouchButton onAction={() => game.playerSpeedUp()}>drop</TouchButton>
+			{:else}
+				<button
+					class="rotate"
+					on:contextmenu|preventDefault
+					type="button"
+					tabindex="-1"
+					on:touchend={touchStop}
+					on:touchcancel={touchStop}
+					on:touchstart|preventDefault={() => {
+						game.playerRotate()
+					}}>{"spin"}</button
+				>
+			{/if}
+			<TouchButton onAction={() => game.playerMoveRight()}>&gt;</TouchButton>
 		{/if}
 	</div>
-{/if}
-<div class="touchControls" hidden={!showTouchControls}>
-	{#if _gameOver}
+</div>
+
+<div class="app settings" hidden={!showTouchSettings}>
+	<div class="touchFloat right" hidden={!showTouchControls}>
 		<button
-			on:contextmenu|preventDefault
-			type="button"
-			tabindex="-1"
-			on:touchend={touchStop}
-			on:touchcancel={touchStop}
-			disabled={lockTouchRetry}
-			on:touchstart|preventDefault={() => {
-				if (lockTouchRetry) {
-					return
-				}
-				newGame()
-			}}>reset</button
-		>
-	{:else}
-		<TouchButton onAction={() => game.playerMoveLeft()}>&lt;</TouchButton>
-		<button
-			class="rotate"
+			class="action"
 			on:contextmenu|preventDefault
 			type="button"
 			tabindex="-1"
 			on:touchend={touchStop}
 			on:touchcancel={touchStop}
 			on:touchstart|preventDefault={() => {
-				game.playerRotate()
-			}}>spin</button
+				//
+				showTouchSettings = !showTouchSettings
+			}}>SETTINGS</button
 		>
-		<TouchButton onAction={() => game.playerMoveRight()}>&gt;</TouchButton>
-	{/if}
+	</div>
+
+	<div class="top">
+		<h4>SETTINGS</h4>
+		<h6>v{version}</h6>
+	</div>
+
+	<fieldset>
+		<label for="touchControlSwap">swap spin and drop</label>
+		<input id="touchControlSwap" type="checkbox" bind:checked={touchControlSwap} />
+	</fieldset>
+	<fieldset
+		on:touchend={() => {
+			game.playerToggleDebug()
+			showTouchSettings = false
+		}}
+	>
+		<span>toggle debug info</span>
+		<span class="go">&gt;</span>
+	</fieldset>
+
+	<hr />
+	<fieldset>a mostly competent port of tetris written by Benjamin Gwynn</fieldset>
+	<fieldset>
+		<a href="https://github.com/benjamingwynn/tetris" target="_blank">
+			<span>view project on Github</span>
+			<span class="go">&gt;</span>
+		</a>
+	</fieldset>
 </div>
 
 <style lang="less">
@@ -243,6 +378,7 @@
 		margin: 0;
 		padding: 0;
 		font-weight: normal;
+		color: inherit;
 	}
 	:global(html) {
 		display: flex;
@@ -258,6 +394,79 @@
 		min-height: 100%;
 		min-width: 100%;
 		overflow: hidden;
+	}
+
+	.app {
+		height: 100%;
+		position: fixed;
+		right: 0;
+		left: 0;
+		bottom: 0;
+		top: 0;
+		display: block;
+		--animation-time: 0.3s;
+		transition-duration: var(--animation-time);
+		transition-property: transform visibility;
+
+		visibility: visible;
+		transform: rotateY(0deg);
+
+		&[hidden] {
+			transition-timing-function: ease-in;
+			visibility: hidden;
+		}
+
+		&:not([hidden]) {
+			transition-timing-function: ease-out;
+			transition-delay: var(--animation-time);
+		}
+
+		&.primary {
+			&[hidden] {
+				transform: rotateY(-90deg);
+			}
+		}
+
+		&[hidden] {
+			transform: rotateY(90deg);
+		}
+	}
+
+	.app.settings {
+		background: black;
+		font-size: 1.5em;
+
+		display: flex;
+		flex-flow: column nowrap;
+
+		.top {
+			height: 6rem;
+			padding: 0 0.3em;
+			display: flex;
+			flex-flow: column nowrap;
+			justify-content: center;
+		}
+
+		fieldset {
+			display: grid;
+			grid-template-columns: 1fr 2em;
+			border: none;
+			padding: 0.5em 0.6em;
+
+			a {
+				display: contents;
+				font: inherit;
+			}
+		}
+
+		hr {
+			margin-top: auto;
+			border-color: #444;
+		}
+
+		.go {
+			text-align: center;
+		}
 	}
 
 	main {
@@ -309,6 +518,11 @@
 		border: double 0.4rem #333;
 		justify-content: center;
 		height: 3.5em;
+	}
+
+	.cursorControls {
+		display: flex;
+		justify-content: space-between;
 	}
 
 	.about {
@@ -393,8 +607,24 @@
 		}
 	}
 
+	.touchFloat {
+		&.right {
+			right: 0;
+		}
+
+		position: fixed;
+		top: 0;
+		display: flex;
+		gap: 0.5em;
+		flex-flow: column nowrap;
+
+		&[hidden] {
+			display: none;
+		}
+	}
+
 	.youDied {
-		background: rgba(0, 0, 0, 0.1);
+		background: rgba(0, 0, 0, 0.2);
 		position: fixed;
 		top: 0;
 		bottom: 0;
@@ -422,5 +652,29 @@
 			font-size: 1.4em;
 			border: grey double 0.4em;
 		}
+	}
+
+	button.action {
+		height: 4.5rem;
+		width: 4.5rem;
+
+		appearance: none;
+		border: double #666 6px;
+		color: white;
+		background: transparent;
+		font-size: 1.2rem;
+		font-family: inherit;
+		outline: none;
+
+		&.active {
+			color: yellow;
+			font-weight: bold;
+		}
+	}
+
+	.touchFloat button.action {
+		height: 6rem;
+		width: 6rem;
+		border-color: #444;
 	}
 </style>
