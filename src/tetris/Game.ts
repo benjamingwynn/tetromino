@@ -21,6 +21,8 @@ type LoggedMove = 1 | 2 | 3 | 4
 
 export type GameLog = Record<number, LoggedMove[]>
 
+export const MAX_MOVES_PER_TICK = 4
+
 export class Game {
 	private ctx: CanvasRenderingContext2D
 
@@ -35,7 +37,7 @@ export class Game {
 	 * The grid of placed items.
 	 * **ATTENTION: this is stored bottom-to-top, this may be the opposite of what you're expecting!**
 	 */
-	private grid: number[][] = [
+	public grid: number[][] = [
 		// [1, 4, 1, 1, 1, 1, 1, 1, 7, 3],
 		// [3, 2, 3, 4, 5, 6, 7, 1, 5, 1],
 		// [4, 6, 1, 1, 2, 1, 1, 4, 1, 6],
@@ -85,12 +87,14 @@ export class Game {
 		previewCanvas,
 		enableAudio,
 		seed,
+		disableAutomaticRendering,
 	}: {
 		canvas?: HTMLCanvasElement
 		onUpdate?: (data: {score: number; gameOver: boolean}) => void
 		previewCanvas?: HTMLCanvasElement
 		enableAudio?: boolean
 		seed?: number
+		disableAutomaticRendering?: true
 	}) {
 		if (onUpdate) this.onUpdate = onUpdate
 
@@ -100,7 +104,9 @@ export class Game {
 			if (!ctx) throw new Error("Canvas is not available on this platform.")
 			ctx.imageSmoothingEnabled = false
 			this.ctx = ctx
-			this.nextFrame = requestAnimationFrame(this.render)
+			if (!disableAutomaticRendering) {
+				this.nextFrame = requestAnimationFrame(this.render)
+			}
 		}
 
 		if (previewCanvas) {
@@ -148,6 +154,7 @@ export class Game {
 
 	/** Start the game regularly. Sets up the tick to happen at a human-playable speed */
 	public play() {
+		this.paused = false
 		this.enableAsyncAnimatedScoring = true
 		this.tickInterval = setInterval(() => {
 			this.tick()
@@ -168,6 +175,9 @@ export class Game {
 			n++
 			const actions = log[this.tickCounter]
 			if (actions) {
+				if (actions.length > MAX_MOVES_PER_TICK) {
+					throw new Error("More moves this tick than the maximum allowed.")
+				}
 				for (const action of actions) {
 					c++
 					switch (action) {
@@ -254,9 +264,11 @@ export class Game {
 		const size = this.size
 		this.ctx.fillRect((x + 0) * size, y * size, size, size)
 
-		this.ctx.strokeStyle = hsl([h, s + 20, l - 20])
-		this.ctx.lineWidth = 2
-		this.ctx.strokeRect((x + 0) * size + 2, y * size + 2, size - 4, size - 4)
+		if (size >= 5) {
+			this.ctx.strokeStyle = hsl([h, s + 20, l - 20])
+			this.ctx.lineWidth = size / 5
+			this.ctx.strokeRect((x + 0) * size + 2, y * size + 2, size - 4, size - 4)
+		}
 	}
 
 	private lastStep = 0
@@ -527,7 +539,8 @@ export class Game {
 		}
 	}
 
-	public render = () => {
+	/** renders a single frame */
+	public renderFrame = () => {
 		if (!this.canvas) throw new Error("render() fired without this.canvas available.")
 
 		this.nextFrame = undefined
@@ -610,6 +623,10 @@ export class Game {
 				this.ctx.fillText(debug[i], 2, fontSize * (i + 1))
 			}
 		}
+	}
+
+	private render = () => {
+		this.renderFrame()
 
 		// queue a new frame
 		this.nextFrame = requestAnimationFrame(this.render)
@@ -651,6 +668,7 @@ export class Game {
 
 	/** @public */
 	public playerRotate() {
+		if (this.moveLog.length >= MAX_MOVES_PER_TICK) return
 		if (this.paused || this.animateRow || this.gameOver) return
 		this.pushToMoveLog(1)
 		const tetromino = this.tetromino
@@ -677,6 +695,7 @@ export class Game {
 
 	/** @public */
 	public playerMoveRight() {
+		if (this.moveLog.length >= MAX_MOVES_PER_TICK) return
 		if (this.paused || this.animateRow || this.gameOver) return
 		this.pushToMoveLog(2)
 		const tetromino = this.tetromino
@@ -700,6 +719,7 @@ export class Game {
 
 	/** @public */
 	public playerMoveLeft() {
+		if (this.moveLog.length >= MAX_MOVES_PER_TICK) return
 		if (this.paused || this.animateRow || this.gameOver) return
 		this.pushToMoveLog(3)
 		const tetromino = this.tetromino
@@ -721,6 +741,7 @@ export class Game {
 
 	/** @public */
 	public playerSpeedUp() {
+		if (this.moveLog.length >= MAX_MOVES_PER_TICK) return
 		if (this.paused || this.animateRow || this.gameOver) return
 		this.pushToMoveLog(4)
 		this.step()
