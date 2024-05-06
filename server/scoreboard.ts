@@ -99,7 +99,7 @@ export async function addToScoreboard(score: number, id: number) {
 		if (score > leaderboardScore) {
 			scores.splice(i, 0, entry)
 			const tooMany = scores.length - MAX_SCOREBOARD_SIZE
-			if (tooMany > 1) {
+			if (tooMany >= 1) {
 				// there are now too many scores in the scoreboard
 				scores.splice(MAX_SCOREBOARD_SIZE, tooMany)
 			}
