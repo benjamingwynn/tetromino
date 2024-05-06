@@ -3,6 +3,7 @@
 import packageJSON from "../package.json" assert {type: "json"}
 import {errors} from "util/errors.ts"
 import {Submission} from "./api.ts"
+import semver from "semver"
 
 const {version} = packageJSON
 
@@ -41,7 +42,9 @@ export function isValidSubmission(obj: any): obj is Submission {
 
 export function assertValid(data: Partial<{clientVersion: string; submission: Submission; username: string}>): void | never {
 	if (typeof data.clientVersion !== "undefined") {
-		if (version !== data.clientVersion) {
+		// if the submission is on a newer or equal version
+		const isVersionValid = semver.satisfies(version, ">=" + version)
+		if (!isVersionValid) {
 			throw errors.VERSION_MISMATCH
 		}
 	}
