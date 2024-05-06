@@ -30,7 +30,7 @@ export async function getScoreboard(page = 0) {
 		} else {
 			console.log("missing deathGrid for", id, "- generating...")
 			const run = await getRunAtIndex(id)
-			const _grid = generateGrid(run.seed, run.score, run.ticks, run.log)
+			const _grid = generateGrid(run.seed, run.score, run.ticks, run.log, run.version)
 			if (_grid) {
 				grid = deathGrids[id] = _grid
 				hadMissingDeathGrids = true

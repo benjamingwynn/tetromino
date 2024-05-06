@@ -1,6 +1,7 @@
 /** @format */
 
 import {Game, GameLog} from "src/tetris/Game.ts"
+import semver from "semver"
 
 /** returns boolean if successful */
 function simulate(game: Game, expectedScore: number, max: number, log: GameLog) {
@@ -35,11 +36,20 @@ export function replay(seed: number, score: number, max: number, log: GameLog) {
 }
 
 /** returns null if failed */
-export function generateGrid(seed: number, score: number, max: number, log: GameLog) {
+export function generateGrid(seed: number, score: number, max: number, log: GameLog, version: string) {
+	console.log("generating grid...")
 	const game = new Game({
 		enableAudio: false,
 		seed,
 	})
+
+	// before 0.0.15 the game had different timings
+	if (semver.satisfies(version, "<0.0.15")) {
+		console.log("using legacy game rules for grid generation")
+		game.minStepInterval = 3
+		game.easiness = 125
+	}
+
 	const ok = simulate(game, score, max, log)
 
 	if (!ok) {
