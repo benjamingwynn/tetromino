@@ -3,21 +3,51 @@
 import {GameLog} from "src/tetris/Game.ts"
 import {datastore} from "./datastore.ts"
 import {getRunAtIndex} from "./runs.ts"
+import {generateGrid, replay} from "./simulator.ts"
+import {censorUsername} from "./censor.ts"
 
 /** [score, runIndexID] */
 type ScoreboardEntry = [number, number]
+type DeathGrid = number[][]
 
 const MAX_SCOREBOARD_SIZE = 20
 
 const initScoreboard = async (): Promise<ScoreboardEntry[]> => []
+const initDeathGrid = async (): Promise<DeathGrid[]> => []
 
 export async function getScoreboard(page = 0) {
 	const scores = await datastore("scoreboard", initScoreboard)
-	const rtn: {id: number; username: string; score: number}[] = []
+	const deathGrids = await datastore("deathGrids", initDeathGrid)
+	const rtn: {id: number; username: string; score: number; grid: number[][]}[] = []
+	let hadMissingDeathGrids = false
+
 	for (const [score, id] of scores) {
+		// generate a death grid for the run if we don't have one
+		let grid: number[][]
+
+		if (deathGrids[id]) {
+			grid = deathGrids[id]
+		} else {
+			console.log("missing deathGrid for", id, "- generating...")
+			const run = await getRunAtIndex(id)
+			const _grid = generateGrid(run.seed, run.score, run.ticks, run.log)
+			if (_grid) {
+				grid = deathGrids[id] = _grid
+				hadMissingDeathGrids = true
+				console.log("finished generating deathGrid for", id)
+			} else {
+				throw new Error("Run already in scoreboard is invalid!")
+			}
+		}
+
 		const {username} = await getRunAtIndex(id)
-		rtn.push({score, id, username: username})
+		rtn.push({score, id, username: censorUsername(username), grid})
 	}
+
+	if (hadMissingDeathGrids) {
+		void deathGrids.flush()
+	}
+
 	return rtn
 	//
 }
@@ -26,7 +56,6 @@ export async function getScoreboard(page = 0) {
 export async function calculateScoreboardPosition(score: number): Promise<number | false> {
 	const scores = await datastore("scoreboard", initScoreboard)
 
-	console.log(scores)
 	const smallestScore = scores.at(-1)
 	if (!smallestScore) {
 		// there are no scores, so you are #1
