@@ -9,7 +9,15 @@ function hsl(stuff: number[]) {
 	return `hsl(${stuff.map((x, i) => (i > 0 ? x + "%" : x)).join(" ")})`
 }
 
-type Tetromino = [TetrominoType, number, number, number]
+type Tetromino = {
+	type: TetrominoType
+	/** left-most point to render at */
+	xOrigin: number
+	/** top-most point to render at */
+	yOrigin: number
+	/** rotation/alternate shape number */
+	rot: number
+}
 
 /**
  * 1: Spin
@@ -321,12 +329,12 @@ export class Game {
 		// const tetromino = this.tetromino
 		if (tetromino) {
 			// see if we're in range of the grid
-			const [type, xOrigin, yOrigin, rot] = tetromino
+			const {type, xOrigin, yOrigin, rot} = tetromino
 			const bitmap = tetrominoes[type][rot]
 
 			const onCollision = () => {
 				// that's a collision, add this to the grid
-				this.lastX = tetromino[1]
+				this.lastX = tetromino.xOrigin
 				this.tetromino = undefined
 				this.tickLostTetromino = this.tickCounter // <- this will cause us to get a new tetromino from the queue
 
@@ -404,7 +412,7 @@ export class Game {
 			if (this.wouldTetrominoCollide(xOrigin + 0, yOrigin + 1, rot)) {
 				onCollision()
 			} else {
-				tetromino[2] += 1
+				tetromino.yOrigin += 1
 			}
 		}
 	}
@@ -416,7 +424,7 @@ export class Game {
 		const tetromino = this.tetromino
 		if (tetromino) {
 			// see if we're in range of the grid
-			const [type] = tetromino
+			const {type} = tetromino
 			const bitmap = tetrominoes[type][rot]
 
 			for (let i = 0; i < bitmap.length; i++) {
@@ -519,11 +527,11 @@ export class Game {
 				}
 			}
 
-			const tetromino: Tetromino = [shape, this.lastX, -tetrominoes[shape][0].length - 0, 0]
+			const tetromino: Tetromino = {type: shape, xOrigin: this.lastX, yOrigin: -tetrominoes[shape][0].length - 0, rot: 0}
 
 			// the spawned tetromino can technically be outside the right of the game, fix that
 			const maxX = this.getTetrominoXMax(tetromino)
-			if (tetromino[1] > maxX) tetromino[1] = maxX
+			if (tetromino.xOrigin > maxX) tetromino.xOrigin = maxX
 			this.tetromino = tetromino
 			this.giveCount++
 
@@ -578,7 +586,7 @@ export class Game {
 			this.muteSounds ? "MUTE" : this.audioCtx ? "SOUND ON" : "SND N/A",
 		]
 		if (tetromino) {
-			const [type, x, y, rot] = tetromino
+			const {type, xOrigin, yOrigin, rot} = tetromino
 			// const color = tetromino_COLORS[type]
 			const color = tetrominoIndices[type] + 1
 			const bitmap = tetrominoes[type][rot]
@@ -587,7 +595,7 @@ export class Game {
 				for (let j = 0; j < row.length; j++) {
 					const filled = row[j]
 					if (filled) {
-						this.drawCell(x + j, y + i, color)
+						this.drawCell(xOrigin + j, yOrigin + i, color)
 					}
 				}
 			}
@@ -661,7 +669,7 @@ export class Game {
 	}
 
 	private getTetrominoXMax(tetromino: NonNullable<typeof this.tetromino>) {
-		const [type, x, y, rot] = tetromino
+		const {type, rot} = tetromino
 
 		return this.columns - 1 - Math.max(...tetrominoes[type][rot].map((y) => y.findLastIndex((x) => x === 1)))
 	}
@@ -673,22 +681,22 @@ export class Game {
 		this.pushToMoveLog(1)
 		const tetromino = this.tetromino
 		if (tetromino) {
-			const t = tetromino[0]
+			const t = tetromino.type
 			const max = tetrominoes[t].length
-			const nextRot = tetromino[3] + 1
+			const nextRot = tetromino.rot + 1
 			const rot = nextRot >= max ? 0 : nextRot
-			const x = tetromino[1]
-			const y = tetromino[2]
+			const x = tetromino.xOrigin
+			const y = tetromino.yOrigin
 
 			if (this.wouldTetrominoCollide(x, y, rot)) {
 			} else {
-				tetromino[3] = rot
+				tetromino.rot = rot
 			}
 
 			// fix X position
 			const maxX = this.getTetrominoXMax(tetromino)
-			if (tetromino[1] > maxX) {
-				tetromino[1] = maxX
+			if (tetromino.xOrigin > maxX) {
+				tetromino.xOrigin = maxX
 			}
 		}
 	}
@@ -701,18 +709,16 @@ export class Game {
 		const tetromino = this.tetromino
 
 		if (tetromino) {
-			const [type, x, y, rot] = tetromino
-
-			if (this.wouldTetrominoCollide(x + 1, y, rot)) {
+			if (this.wouldTetrominoCollide(tetromino.xOrigin + 1, tetromino.yOrigin, tetromino.rot)) {
 				return
 			}
 
-			tetromino[1]++
+			tetromino.xOrigin++
 
 			// fix X position
 			const maxX = this.getTetrominoXMax(tetromino)
-			if (tetromino[1] > maxX) {
-				tetromino[1] = maxX
+			if (tetromino.xOrigin > maxX) {
+				tetromino.xOrigin = maxX
 			}
 		}
 	}
@@ -724,17 +730,15 @@ export class Game {
 		this.pushToMoveLog(3)
 		const tetromino = this.tetromino
 		if (tetromino) {
-			const [type, x, y, rot] = tetromino
-
-			if (this.wouldTetrominoCollide(x - 1, y, rot)) {
+			if (this.wouldTetrominoCollide(tetromino.xOrigin - 1, tetromino.yOrigin, tetromino.rot)) {
 				return
 			}
 
-			tetromino[1]--
+			tetromino.xOrigin--
 
 			// fix X position
-			if (tetromino[1] <= 0) {
-				tetromino[1] = 0
+			if (tetromino.xOrigin <= 0) {
+				tetromino.xOrigin = 0
 			}
 		}
 	}
