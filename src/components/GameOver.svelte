@@ -50,7 +50,7 @@
 				<PleaseWait />
 			{/if}
 		{:else}
-			<h4>Please enter your name and press submit to upload your score to the leaderboard.</h4>
+			<h4>Please enter your name and press confirm to upload your score to the leaderboard.</h4>
 			<form
 				id="submitMobile"
 				on:submit|preventDefault={() => {
