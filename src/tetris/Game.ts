@@ -265,6 +265,14 @@ export class Game {
 	private stepInterval = this.startStepInterval
 	private giveTetrominoInterval = 13
 	private tickLostTetromino: number = 0
+	/** 
+	 * how the score decreases the score
+	 * effectively determines the length of the game until hitting the `minStepInterval`
+	 * 
+	 * 125 = 10-15 min
+	 * 250 = ~30 min?
+	 */
+	private easiness = 125
 	public paused = false
 	private gameOver = false
 	private score = 0
@@ -509,7 +517,7 @@ export class Game {
 
 			// **speed up the game**
 			if (this.giveCount % 5 === 0) {
-				this.stepInterval = Math.floor(this.startStepInterval - this.score / 125)
+				this.stepInterval = Math.floor(this.startStepInterval - this.score / this.easiness)
 				this.stepInterval = Math.max(this.minStepInterval, this.stepInterval)
 			}
 		}
