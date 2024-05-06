@@ -6,8 +6,8 @@ import {getRunAtIndex} from "./runs.ts"
 import {generateGrid, replay} from "./simulator.ts"
 import {censorUsername} from "./censor.ts"
 
-/** [score, runIndexID] */
-type ScoreboardEntry = [number, number]
+/** [score, runIndexID, time added (if recorded)] */
+type ScoreboardEntry = [number, number, number | undefined]
 type DeathGrid = number[][]
 
 const MAX_SCOREBOARD_SIZE = 20
@@ -52,6 +52,9 @@ export async function getScoreboard(page = 0) {
 	//
 }
 
+export type Scoreboard = Awaited<ReturnType<typeof getScoreboard>>
+export type ScoreboardResult = Scoreboard[number]
+
 /** returns either a number or false */
 export async function calculateScoreboardPosition(score: number): Promise<number | false> {
 	const scores = await datastore("scoreboard", initScoreboard)
@@ -81,7 +84,7 @@ export async function calculateScoreboardPosition(score: number): Promise<number
 
 export async function addToScoreboard(score: number, id: number) {
 	const scores = await datastore("scoreboard", initScoreboard)
-	const entry: ScoreboardEntry = [score, id]
+	const entry: ScoreboardEntry = [score, id, Date.now()]
 	console.log("ADD ENTRY TO SCOREBOARD:", entry)
 
 	if (scores.length === 0) {
@@ -94,12 +97,18 @@ export async function addToScoreboard(score: number, id: number) {
 	for (let i = 0; i < scores.length; i++) {
 		const [leaderboardScore, id] = scores[i]
 		if (score > leaderboardScore) {
-			scores.splice(i, +(scores.length === MAX_SCOREBOARD_SIZE), entry)
+			scores.splice(i, 0, entry)
+			const tooMany = scores.length - MAX_SCOREBOARD_SIZE
+			if (tooMany > 1) {
+				// there are now too many scores in the scoreboard
+				scores.splice(MAX_SCOREBOARD_SIZE, tooMany)
+			}
 			void scores.flush()
 			return
 		}
 	}
 	if (scores.length < MAX_SCOREBOARD_SIZE) {
+		console.log("added entry because the scoreboard has space")
 		scores.push(entry)
 		void scores.flush()
 	}
