@@ -1,18 +1,9 @@
 /** @format */
 
+import {noop, sleep} from "util/util.ts"
 import RandomNumberGenerator from "mersenne-twister"
 import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./tetrominoes.ts"
 // import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./debug_tetrominoes.ts"
-
-const noop = () => undefined
-
-function sleep(ms: number) {
-	return new Promise<void>((resolve) => {
-		setTimeout(() => {
-			resolve()
-		}, ms)
-	})
-}
 
 function hsl(stuff: number[]) {
 	return `hsl(${stuff.map((x, i) => (i > 0 ? x + "%" : x)).join(" ")})`
@@ -27,6 +18,8 @@ type Tetromino = [TetrominoType, number, number, number]
  * 4: Speed up
  */
 type LoggedMove = 1 | 2 | 3 | 4
+
+export type GameLog = Record<number, LoggedMove[]>
 
 export class Game {
 	private ctx: CanvasRenderingContext2D
@@ -162,7 +155,7 @@ export class Game {
 	}
 
 	/** returns `true` if terminate with game over, `false` if terminated early */
-	public replay(log: typeof this.gameLog, max: number): boolean {
+	public replay(log: GameLog, max: number): boolean {
 		const t = performance.now()
 		this.enableAsyncAnimatedScoring = false
 		let n = 0
@@ -202,16 +195,16 @@ export class Game {
 			this.tick()
 		}
 		const timeTaken = performance.now() - t
-		// console.log(
-		// 	"Replayed",
-		// 	c,
-		// 	"moves over",
-		// 	this.tickCounter,
-		// 	"ticks in",
-		// 	timeTaken,
-		// 	"ms",
-		// 	`(${Math.floor(this.tickCounter / (timeTaken / 1000))} ticks/sec)`
-		// )
+		console.log(
+			"Replayed",
+			c,
+			"moves over",
+			this.tickCounter,
+			"ticks in",
+			timeTaken,
+			"ms",
+			`(${Math.floor(this.tickCounter / (timeTaken / 1000))} ticks/sec)`
+		)
 		return true
 	}
 
@@ -288,7 +281,7 @@ export class Game {
 	private drawDebug = false
 	private giveCount = 0
 	private moveLog: LoggedMove[] = []
-	public gameLog: Record<number, typeof this.moveLog> = {}
+	public gameLog: GameLog = {}
 
 	private pushToMoveLog(move: LoggedMove) {
 		this.moveLog.push(move)
@@ -414,9 +407,9 @@ export class Game {
 						const partX = j + x
 						const partY = i + y
 
-						this.debugBoxes.push({stroke: "red", x: partX, y: partY})
+						if (this.drawDebug) this.debugBoxes.push({stroke: "red", x: partX, y: partY})
 						if (partY === this.rows) {
-							this.debugBoxes.push({stroke: "limegreen", x: partX, y: partY - 1})
+							if (this.drawDebug) this.debugBoxes.push({stroke: "limegreen", x: partX, y: partY - 1})
 							return 2
 						}
 						for (let i2 = 0; i2 < this.grid.length; i2++) {
@@ -427,7 +420,7 @@ export class Game {
 									const gridFill = row[gridX]
 									if (gridFill) {
 										if (partX === gridX && partY === gridY) {
-											this.debugBoxes.push({stroke: "limegreen", x: partX, y: partY})
+											if (this.drawDebug) this.debugBoxes.push({stroke: "limegreen", x: partX, y: partY})
 											return 1
 										}
 									}

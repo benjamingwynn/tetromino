@@ -2,5 +2,5 @@
 	"[svelte]": {
 		"editor.defaultFormatter": "svelte.svelte-vscode"
 	},
-	"cSpell.words": ["mersenne", "outdir", "Tetris", "Tetromino", "tetrominoes"]
+	"cSpell.words": ["leaderboard", "mersenne", "outdir", "Tetris", "Tetromino", "tetrominoes"]
 }

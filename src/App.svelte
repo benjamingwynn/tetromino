@@ -4,9 +4,12 @@
 	import Score from "./components/Score.svelte"
 	import HighScore from "./components/HighScore.svelte"
 	import TouchButton from "./components/TouchButton.svelte"
+	import GameOver from "./components/GameOver.svelte"
 	import {Game} from "./tetris/Game"
 	import {version} from "../package.json"
 	import "./font/RedAlert.css"
+	import AnimatedText from "./components/AnimatedText.svelte"
+	import Leaderboard from "./components/Leaderboard.svelte"
 
 	let canvas: HTMLCanvasElement
 	let altCanvas: HTMLCanvasElement
@@ -30,7 +33,7 @@
 		const score = game2.getScore()
 		if (success && score === _score) {
 			// console.log("**** SUCCESS!! ****")
-			canvas.style.borderColor = "green"
+			// canvas.style.borderColor = "green"
 			altCanvas.style.borderColor = "green"
 		} else if (!success && score === _score) {
 			// console.warn("**** NON-SUCCESS BUT MATCHING SCORE!! ****")
@@ -51,6 +54,8 @@
 
 	const newGame = () => {
 		// altCanvas.hidden = true
+		touchSubmitScoreStage2 = false
+		touchStop()
 		canvas.style.borderColor = ""
 		if (game) game.destroy()
 		_score = 0
@@ -84,22 +89,11 @@
 		window.game = game
 	}
 
-	let touchDirection: undefined | "moveLeft" | "rotate" | "moveRight" | "speedUp" = undefined
-	let nextTouchSpeedUp: number | undefined = undefined
-	let nextTouchDirectionTick: number | undefined = undefined
+	let nextTouchSpeedUp: ReturnType<typeof setTimeout> | undefined = undefined
 	const touchSpeedUp = () => {
 		game.playerSpeedUp()
-		nextTouchSpeedUp = setTimeout(touchSpeedUp, 16.7 * 4)
-	}
-	const touchDirectionTick = () => {
-		if (touchDirection === "moveLeft") {
-			game.playerMoveLeft()
-		} else if (touchDirection === "moveRight") {
-			game.playerMoveRight()
-		}
-		if (touchDirection) {
-			nextTouchDirectionTick = setTimeout(touchDirectionTick, 16.7 * 4)
-		}
+		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
+		nextTouchSpeedUp = setTimeout(touchSpeedUp, 16.7 * 3)
 	}
 
 	onMount(() => {
@@ -107,19 +101,22 @@
 
 		return () => {
 			game.destroy()
+			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 		}
 	})
 
 	const touchStop = () => {
-		touchDirection = undefined
-		if (nextTouchDirectionTick) clearTimeout(nextTouchDirectionTick)
+		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 	}
 
+	let showLeaderboard = false
 	let paused = false
 	let gameMute = !!localStorage.mute
 	let touchControlSwap = !!localStorage.touchControlSwap
+	let lockTouchSubmitScore = true
+	let touchSubmitScoreStage2 = false
 	$: game && (game.muteSounds = gameMute)
-	$: game && (game.paused = paused || showTouchSettings)
+	$: game && (game.paused = paused || showTouchSettings || showLeaderboard)
 	$: localStorage.mute = gameMute ? 1 : ""
 	$: localStorage.touchControlSwap = touchControlSwap ? 1 : ""
 	$: localStorage.highScore = _highScore
@@ -130,7 +127,15 @@
 
 <svelte:window
 	on:keydown={(ev) => {
-		showTouchControls = false
+		if (!navigator.maxTouchPoints) {
+			showTouchControls = false
+		}
+
+		// ignore keyboard presses if we're focused on an input
+		if (document.activeElement?.tagName === "INPUT" && ev.key !== "Escape") {
+			return
+		}
+
 		if (ev.key === " " || ev.key === "ArrowUp" || ev.key === "w") {
 			game.playerRotate()
 		} else if (ev.key === "ArrowRight" || ev.key === "d") {
@@ -139,7 +144,7 @@
 			game.playerMoveLeft()
 		} else if (ev.key === "ArrowDown" || ev.key === "s") {
 			game.playerSpeedUp()
-		} else if (ev.key === "r") {
+		} else if (ev.key === "r" || ev.key === "Escape") {
 			// reset
 			newGame()
 		} else if (ev.key === "p") {
@@ -147,22 +152,27 @@
 			paused = !paused
 		} else if (ev.key === "m") {
 			// mute
-			game.muteSounds = !game.muteSounds
+			gameMute = !gameMute
 		} else if (ev.key === "F1") {
 			// pause
 			game.playerToggleDebug()
 		} else if (ev.key === "F2") {
 			altCanvas.hidden = !altCanvas.hidden
+		} else if (ev.key === "l") {
+			showLeaderboard = !showLeaderboard
 		} else {
 			console.warn("unregistered key:", ev.key)
 		}
 	}}
 />
 
-<div class="app primary" hidden={showTouchSettings}>
+<div class="app primary" hidden={showTouchSettings || (showLeaderboard && showTouchControls)} class:dead={_gameOver} class:touch={showTouchControls}>
 	<main
 		on:contextmenu|preventDefault
-		on:touchstart|preventDefault={() => {
+		on:touchstart={(ev) => {
+			if (ev.target.tagName !== "INPUT") {
+				ev.preventDefault()
+			}
 			showTouchControls = true
 			if (touchControlSwap) {
 				game.playerRotate()
@@ -177,12 +187,24 @@
 			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 		}}
 	>
-		<!-- <h1>Tetris</h1> -->
 		<div class="game">
 			<canvas width="100px" height="200px" bind:this={canvas} />
 			<canvas width="100px" height="200px" bind:this={altCanvas} hidden />
 		</div>
-		<div class="stats">
+
+		{#if _gameOver}
+			<GameOver
+				{game}
+				{newGame}
+				{_score}
+				{_highScore}
+				{showTouchControls}
+				{touchSubmitScoreStage2}
+				toggleLeaderboard={() => (showLeaderboard = true)}
+				changeLockTouchSubmitScore={(_) => (lockTouchSubmitScore = _)}
+			/>
+		{/if}
+		<div class="stats" hidden={_gameOver}>
 			<div class="scoreboard">
 				<h5>TOP</h5>
 				<HighScore score={_highScore} />
@@ -205,7 +227,7 @@
 						tabindex="-1"
 						on:click={() => {
 							paused = !paused //
-						}}>{paused ? "RESUME" : "(P)AUSE"}</button
+						}}>{paused ? "UN <P>AUSE" : "<P>AUSE"}</button
 					>
 					<button
 						on:contextmenu|preventDefault
@@ -215,9 +237,20 @@
 						tabindex="-1"
 						on:click={() => {
 							gameMute = !gameMute
-						}}>{gameMute ? "UNMUTE" : "MUTE"}</button
+						}}>{gameMute ? "UN <M>UTE" : "<M>UTE"}</button
 					>
 				</div>
+
+				<button
+					on:contextmenu|preventDefault
+					type="button"
+					class="action long"
+					tabindex="-1"
+					class:active={showLeaderboard}
+					on:click={() => {
+						showLeaderboard = true
+					}}>&lt;L&gt;EADERBOARD</button
+				>
 			{/if}
 		</div>
 		<div class="about">
@@ -231,7 +264,7 @@
 		</div>
 	</main>
 
-	<div class="touchFloat left" hidden={!showTouchControls}>
+	<div class="touchFloat left" hidden={!showTouchControls || _gameOver}>
 		<button
 			on:contextmenu|preventDefault
 			type="button"
@@ -272,10 +305,23 @@
 				// game.playerToggleDebug()
 			}}>SETTINGS</button
 		>
+		<button
+			on:contextmenu|preventDefault
+			class="action"
+			type="button"
+			tabindex="-1"
+			on:touchend={touchStop}
+			on:touchcancel={touchStop}
+			on:touchstart|preventDefault={() => {
+				//
+				showLeaderboard = true
+				// game.playerToggleDebug()
+			}}>LEADER BOARD</button
+		>
 	</div>
 
 	{#if _gameOver}
-		<div class="youDied">
+		<!-- <div class="youDied">
 			<h1>GAME OVER</h1>
 			{#if !showTouchControls}
 				<button
@@ -286,7 +332,7 @@
 					}}>(R)eset and start new game</button
 				>
 			{/if}
-		</div>
+		</div> -->
 	{/if}
 	<div class="touchControls" hidden={!showTouchControls}>
 		{#if _gameOver}
@@ -303,6 +349,26 @@
 					}
 					newGame()
 				}}>reset</button
+			>
+			<button
+				on:contextmenu|preventDefault
+				type="button"
+				tabindex="-1"
+				on:touchend={touchStop}
+				on:touchcancel={touchStop}
+				disabled={lockTouchRetry || lockTouchSubmitScore}
+				on:touchstart|preventDefault={() => {
+					if (lockTouchSubmitScore) {
+						return
+					}
+					if (touchSubmitScoreStage2) {
+						// HACK: doing this with svelte is actually quite difficult, so just hack it via the DOM
+						document.querySelector("#submitMobile")?.dispatchEvent(new SubmitEvent("submit", {}))
+					} else {
+						touchSubmitScoreStage2 = true
+					}
+					// newGame()
+				}}>{touchSubmitScoreStage2 ? "confirm" : "submit"}</button
 			>
 		{:else}
 			<TouchButton onAction={() => game.playerMoveLeft()}>&lt;</TouchButton>
@@ -360,6 +426,15 @@
 		<span>toggle debug info</span>
 		<span class="go">&gt;</span>
 	</fieldset>
+	<fieldset
+		on:touchend={() => {
+			newGame()
+			showTouchSettings = false
+		}}
+	>
+		<span>reset game</span>
+		<span class="go">&gt;</span>
+	</fieldset>
 
 	<hr />
 	<fieldset>a mostly competent port of tetris written by Benjamin Gwynn</fieldset>
@@ -370,6 +445,53 @@
 		</a>
 	</fieldset>
 </div>
+
+{#if showTouchControls}
+	<div class="app leaderboard" hidden={!showLeaderboard}>
+		<div class="touchFloat right" hidden={!showTouchControls}>
+			<button
+				class="action"
+				on:contextmenu|preventDefault
+				type="button"
+				tabindex="-1"
+				on:touchend={touchStop}
+				on:touchcancel={touchStop}
+				on:click|preventDefault={() => {
+					showLeaderboard = false
+				}}>X</button
+			>
+		</div>
+
+		<div class="top">
+			<h4>LEADERBOARD</h4>
+			<h6>v{version}</h6>
+		</div>
+
+		{#if showLeaderboard}
+			<Leaderboard />
+		{/if}
+	</div>
+{:else}
+	<div class="floating leaderboard" hidden={!showLeaderboard}>
+		<div class="top">
+			<h4>LEADERBOARD</h4>
+			<h6>v{version}</h6>
+		</div>
+
+		{#if showLeaderboard}
+			<Leaderboard />
+		{/if}
+
+		<div class="bottom">
+			<button
+				type="button"
+				on:click={() => {
+					showLeaderboard = false
+				}}>C&lt;L&gt;OSE</button
+			>
+		</div>
+	</div>
+{/if}
 
 <style lang="less">
 	:global(*) {
@@ -469,10 +591,68 @@
 		}
 	}
 
+	.app.leaderboard {
+		background: black;
+
+		display: flex;
+		font-size: 1.5em;
+		flex-flow: column nowrap;
+	}
+
+	.leaderboard .top {
+		flex: 0 0 auto;
+		height: 6rem;
+		padding: 0 0.3em;
+		display: flex;
+		flex-flow: column nowrap;
+		justify-content: center;
+	}
+
+	.leaderboard .bottom {
+		margin-top: auto;
+		display: flex;
+	}
+
+	.leaderboard.floating {
+		background: rgba(0, 0, 0, 0.8);
+		position: fixed;
+		font-size: 2.3em;
+		top: 4rem;
+		bottom: 6rem;
+		right: 0;
+		left: 0;
+		margin: auto;
+		width: 100%;
+		max-width: 20em;
+		border: 1rem double orange;
+		display: flex;
+		border-radius: 6px;
+		flex-flow: column nowrap;
+
+		&[hidden] {
+			display: none;
+		}
+
+		button {
+			margin-left: auto;
+			font: inherit;
+			color: inherit;
+			background: none;
+			border: none;
+			outline: none;
+			appearance: none;
+			padding: 0.5em;
+
+			&:focus {
+				color: yellow;
+			}
+		}
+	}
+
 	main {
 		padding-top: 1em;
 		display: grid;
-		grid-template-columns: auto 10em 5em;
+		grid-template-columns: auto 5em 10em 5em;
 		grid-template-rows: auto 5em;
 		height: 100%;
 
@@ -507,6 +687,11 @@
 		display: flex;
 		flex-flow: column nowrap;
 		gap: 1em;
+		grid-column: 3;
+
+		&[hidden] {
+			display: none;
+		}
 	}
 
 	.scoreboard {
@@ -526,20 +711,33 @@
 	}
 
 	.about {
-		grid-column: 1 / span 3;
+		grid-column: 1 / span 4;
 		margin: auto;
 		text-align: center;
 	}
 
 	@media (max-width: 639px) {
+		.app.dead {
+			.about {
+				display: none;
+			}
+		}
+
+		.app:not(.touch) {
+			.about {
+				grid-row: 4;
+			}
+		}
+
 		main {
 			grid-template-columns: auto;
 			grid-template-rows: auto 8rem 3rem 10rem;
 			padding-right: 0;
 
-			h1 {
+			.stats {
 				grid-column: auto;
-				display: none;
+				display: grid;
+				grid-template-columns: 1fr 1fr 1fr;
 			}
 
 			canvas {
@@ -571,7 +769,7 @@
 	}
 
 	.touchControls {
-		font-size: 5em;
+		font-size: 4em;
 		position: fixed;
 		bottom: 0;
 		left: 0;
@@ -665,6 +863,11 @@
 		font-size: 1.2rem;
 		font-family: inherit;
 		outline: none;
+
+		&.long {
+			width: 100%;
+			height: 3.5rem;
+		}
 
 		&.active {
 			color: yellow;

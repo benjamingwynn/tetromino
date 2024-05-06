@@ -3,7 +3,12 @@
 		"composite": true,
 		"target": "ESNext",
 		"module": "NodeNext",
-		"paths": {},
+		"paths": {
+			"server/*": ["./server/*"],
+			"util/*": ["./util/*"],
+			"src/*": ["./src/*"],
+			"client/*": ["./src/client/*"]
+		},
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
@@ -11,8 +16,9 @@
 		"skipDefaultLibCheck": true,
 		"skipLibCheck": true,
 		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
 		"noEmit": true
 	},
-	"include": ["src", "./*.ts"],
+	"include": ["src", "./*.ts", "util/", "server/"],
 	"references": []
 }

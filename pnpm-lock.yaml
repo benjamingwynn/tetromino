@@ -16,7 +16,7 @@ devDependencies:
     version: 20.12.8
   bests:
     specifier: benjamingwynn/bests
-    version: github.com/benjamingwynn/bests/83ecef2f998ec90fcb2f8213fbd93ed7677d1e8a
+    version: github.com/benjamingwynn/bests/a609bb4f9e198038c819a299de0abcded465915b
   esbuild:
     specifier: ^0.20.2
     version: 0.20.2
@@ -1110,10 +1110,10 @@ packages:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
     dev: true
 
-  github.com/benjamingwynn/bests/83ecef2f998ec90fcb2f8213fbd93ed7677d1e8a:
-    resolution: {tarball: https://codeload.github.com/benjamingwynn/bests/tar.gz/83ecef2f998ec90fcb2f8213fbd93ed7677d1e8a}
+  github.com/benjamingwynn/bests/a609bb4f9e198038c819a299de0abcded465915b:
+    resolution: {tarball: https://codeload.github.com/benjamingwynn/bests/tar.gz/a609bb4f9e198038c819a299de0abcded465915b}
     name: bests
-    version: 0.0.2
+    version: 0.0.3
     engines: {node: '>=18'}
     os: ['!win32']
     hasBin: true

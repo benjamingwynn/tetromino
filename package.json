@@ -6,7 +6,8 @@
 	"scripts": {
 		"start": "bests --watch ./esDev.ts",
 		"build": "bests ./esBuild.ts",
-		"deploy": "pnpm version patch && git push && git push --tags"
+		"deploy": "pnpm version patch && git push && git push --tags",
+		"server": "bests --watch ./server/main.node.ts"
 	},
 	"engines": {
 		"node": ">=20"
