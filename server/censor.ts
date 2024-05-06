@@ -14,6 +14,20 @@ export function makeExpletive(length: number) {
 	return str
 }
 
+function removeDuplicateLetters(str: string): string {
+	const charMap: {[key: string]: boolean} = {}
+	let result = ""
+
+	for (const char of str) {
+		if (!charMap[char]) {
+			charMap[char] = true
+			result += char
+		}
+	}
+
+	return result
+}
+
 export function basicCensor(str: string) {
 	for (const badWord of words) {
 		let i: number
@@ -36,5 +50,12 @@ export function censorUsername(str: string) {
 	const out = replaceBadWords(str, locations)
 
 	// step 2. censor anything more basic left over
-	return basicCensor(out)
+	const rtn = basicCensor(out)
+
+	// step 3. if they used duplicate letters to bypass the filter then give up on the entire username
+	if (removeDuplicateLetters(rtn) !== basicCensor(removeDuplicateLetters(rtn))) {
+		return makeExpletive(str.length)
+	}
+
+	return rtn
 }
