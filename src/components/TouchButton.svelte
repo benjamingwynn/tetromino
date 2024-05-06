@@ -1,11 +1,13 @@
 <!-- @format -->
 <script lang="ts">
+	import {onMount} from "svelte"
+
 	export let onAction: () => void
 
 	export let delay: number = 200
 	export let interval: number = 16.7 * 4
-	let nextTick: number | undefined = undefined
-	let nextDelay: number | undefined = undefined
+	let nextTick: ReturnType<typeof setTimeout> | undefined = undefined
+	let nextDelay: ReturnType<typeof setTimeout> | undefined = undefined
 
 	const touchStop = () => {
 		if (nextDelay) clearTimeout(nextDelay)
@@ -16,7 +18,16 @@
 		onAction()
 		nextTick = setTimeout(tick, interval)
 	}
+
+	onMount(() => {
+		return () => {
+			touchStop()
+		}
+	})
 </script>
+
+<svelte:window on:touchend={touchStop} on:touchcancel={touchStop} />
+<svelte:document on:touchend={touchStop} on:touchcancel={touchStop} />
 
 <button
 	on:contextmenu|preventDefault
