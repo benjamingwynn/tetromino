@@ -260,19 +260,19 @@ export class Game {
 	}
 
 	private lastStep = 0
-	private minStepInterval = 3
+	private minStepInterval = 6
 	private startStepInterval = 50
 	private stepInterval = this.startStepInterval
 	private giveTetrominoInterval = 13
 	private tickLostTetromino: number = 0
-	/** 
+	/**
 	 * how the score decreases the score
 	 * effectively determines the length of the game until hitting the `minStepInterval`
-	 * 
+	 *
 	 * 125 = 10-15 min
 	 * 250 = ~30 min?
 	 */
-	private easiness = 125
+	private easiness = 250
 	public paused = false
 	private gameOver = false
 	private score = 0
