@@ -29,7 +29,7 @@ export function basicCensor(str: string) {
 }
 
 const words = badwords.array
-const wordFilter = preprocessWordLists(words, ["xxx"])
+const wordFilter = preprocessWordLists([...words, "sucks", "lol", "sux", "bad", "is", "gud", "iz"], ["xxx"])
 export function censorUsername(str: string) {
 	// step 1. censor with the deep-profanity-filter module
 	const locations = findBadWordLocations(str.toLowerCase(), wordFilter)
