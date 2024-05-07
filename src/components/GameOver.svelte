@@ -17,6 +17,7 @@
 	export let changeLockTouchSubmitScore: (lockTouchSubmitScore: boolean) => void
 	changeLockTouchSubmitScore(false)
 	export let touchSubmitScoreStage2 = false
+	export let onGameOver: () => void
 
 	let submissionError: string | undefined = undefined
 	let submissionSuccessful: boolean = false
@@ -24,8 +25,12 @@
 	let username: string = localStorage.username ?? ""
 
 	const makeSubmission = () => {
-		return {log: game.gameLog, score: _score, seed: game.seed, ticks: game.getTicks()}
+		const rtn = {log: game.gameLog, score: _score, seed: game.seed, ticks: game.getTicks()}
+		onGameOver()
+		return rtn
 	}
+
+	const submission = makeSubmission()
 
 	const gg = "Your high score has been submitted to the leaderboard, congratulations!"
 	const errorsSay = "Leaderboard upload unavailable: "
@@ -59,7 +64,7 @@
 					submitting = true
 					submissionError = ""
 					console.log("--will submit high score--", {username})
-					api.submit(version, makeSubmission(), username)
+					api.submit(version, submission, username)
 						.then(() => {
 							submissionSuccessful = true
 						})
@@ -85,15 +90,14 @@
 		{#if _score && _score === _highScore}
 			<h4 style:color="yellow"><AnimatedText text={"NEW PERSONAL BEST!"}></AnimatedText></h4>
 		{/if}
-		{#await api.validate(version, makeSubmission())}
+		{#await api.validate(version, submission)}
 			<h4><AnimatedText text={"Checking your score"} /><AnimatedText text={"..."} duration={1000} loop={true} /></h4>
 			{(changeLockTouchSubmitScore(true), "")}
 		{:then result}
 			{#if result}
 				{(changeLockTouchSubmitScore(false), "")}
 				<h3 style:color="limegreen">
-					<AnimatedText
-						text={`You placed #${result} on the leaderboard!${showTouchControls ? " Press submit below to submit your score to the leaderboard." : ""}`}
+					<AnimatedText text={`You placed #${result} on the leaderboard!${showTouchControls ? " Press submit below to add your score." : ""}`}
 					></AnimatedText>
 				</h3>
 				{#if !showTouchControls}
@@ -103,7 +107,7 @@
 							submitting = true
 							submissionError = ""
 							console.log("--will submit high score--", {username})
-							api.submit(version, makeSubmission(), username)
+							api.submit(version, submission, username)
 								.then(() => {
 									submissionSuccessful = true
 								})

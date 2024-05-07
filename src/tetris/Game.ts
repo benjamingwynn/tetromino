@@ -39,7 +39,7 @@ export class Game {
 	private nextFrame?: number
 	public muteSounds = false
 
-	public readonly seed: number
+	public seed: number
 
 	/**
 	 * The grid of placed items.
@@ -59,6 +59,7 @@ export class Game {
 
 	/** array of [h,s,l] */
 	private colors = [
+		[0, 0, 90], // (dead)
 		[180, 90, 60], // I
 		[60, 90, 60], // O
 		[300, 90, 60], // T
@@ -85,7 +86,7 @@ export class Game {
 
 	private canvas?: HTMLCanvasElement = undefined
 	private previewCanvas?: HTMLCanvasElement = undefined
-	private onUpdate: (data: {score: number; gameOver: boolean}) => void = noop
+	public onUpdate: (data: {score: number; gameOver: boolean}) => void = noop
 
 	private randomGenerator: RandomNumberGenerator
 
@@ -160,19 +161,231 @@ export class Game {
 		}
 	}
 
+	public getAndSetNewSeed() {
+		this.seed = Math.floor(Date.now() / 60_000)
+	}
+
 	/** Start the game regularly. Sets up the tick to happen at a human-playable speed */
 	public play() {
 		this.paused = false
-		this.enableAsyncAnimatedScoring = true
+		this.enableAsyncAnimations = true
 		this.tickInterval = setInterval(() => {
 			this.tick()
 		}, 20)
 	}
 
+	private scoreAnimationPromise?: Promise<void>
+	public loseAnimationPromise?: Promise<void>
+
+	private playbackInProgress?: {
+		nextFrame?: number
+		log: GameLog
+		max: number
+		duration: number
+		startTime: number
+		timeSpentAnimating: number
+		done: () => void
+		reject: () => void
+		assertRunning: () => boolean
+		lastPauseTime?: number
+		timeSpentPaused: number
+		loop: boolean
+	}
+
+	private playbackLoopGap = 1
+
+	private playbackFrame = () => {
+		// if (!playback) return
+		;(async () => {
+			//
+			//
+			// TODO: FIX THIS SO IT WORKS WITH PLAY/PAUSE PROPERLY
+			//
+			//
+
+			// playback.nextFrame = undefined
+			const playback = this.playbackInProgress
+			if (!playback) throw new Error("wtf")
+			const {duration, max, log, timeSpentAnimating, timeSpentPaused} = playback
+			const startTime = playback.startTime + timeSpentPaused
+			const willEndAt = startTime + duration + timeSpentAnimating + timeSpentPaused
+			const now = Date.now()
+			const delta = Math.min(1, (now - startTime) / (willEndAt - startTime))
+			const ticksBehind = Math.ceil(delta * max - this.tickCounter)
+			// console.log(timeSpentPaused, delta, ticksBehind)
+
+			if (this.paused) {
+				if (playback.lastPauseTime) {
+					playback.timeSpentPaused += now - playback.lastPauseTime
+				}
+				playback.lastPauseTime = now
+				playback.nextFrame = requestAnimationFrame(this.playbackFrame)
+				return
+			} else if (playback.lastPauseTime) {
+				playback.lastPauseTime = undefined
+			}
+
+			if (!log) throw new Error("wtf")
+			if (ticksBehind > 0) {
+				// console.log("replaying", ticksBehind, "ticks")
+				for (let i = 0; i < ticksBehind; i++) {
+					this.replayNextTick(log)
+
+					// wait for animations to finish
+					if (this.scoreAnimationPromise) {
+						const t = Date.now()
+						await this.scoreAnimationPromise
+						const t2 = Date.now()
+						if (this.playbackInProgress) this.playbackInProgress.timeSpentAnimating += t2 - t
+					}
+
+					if (this.loseAnimationPromise) {
+						const t = Date.now()
+						await this.loseAnimationPromise
+						const t2 = Date.now()
+						if (this.playbackInProgress) this.playbackInProgress.timeSpentAnimating += t2 - t
+						console.log("LOSE ANIMATION IN PROGRESS")
+					}
+				}
+			}
+			// queue a new frame
+			{
+				const playback = this.playbackInProgress
+				if (!playback) {
+					console.error("playback gone after animation, bailing")
+					return // playback can be disappeared between animation and start of frame
+				}
+				if (this.tickCounter === playback.max || this.gameOver) {
+					if (playback.loop) {
+						if (now > willEndAt + this.playbackLoopGap) {
+							console.log("*** playback loop end ***", {tickMaxed: this.tickCounter === playback.max, gameOver: this.gameOver})
+							this.reset()
+						}
+						playback.nextFrame = requestAnimationFrame(this.playbackFrame)
+					} else {
+						console.log("*** playback finished ***", {gameOver: this.gameOver})
+						playback.done()
+					}
+				} else {
+					playback.nextFrame = requestAnimationFrame(this.playbackFrame)
+					// } else if (ticksBehind && playback.assertRunning()) {
+					// 	playback.nextFrame = requestAnimationFrame(this.playbackFrame)
+					// } else {
+					// 	console.warn("bailing from playback frame loop")
+				}
+			}
+		})() /*.catch(console.error)*/
+	}
+
+	private reset() {
+		// if (this.playbackInProgress) throw new Error("cannot reset while playback in progress")
+		if (this.loseAnimationPromise || this.scoreAnimationPromise) throw new Error("running animation while asked to reset :(")
+		if (this.tickInterval) {
+			console.warn("reset() stopped running tickInterval")
+			clearInterval(this.tickInterval)
+			this.tickInterval = undefined
+		}
+		this.tetromino = undefined
+		// recreate the RNG
+		this.randomGenerator = new RandomNumberGenerator(this.seed)
+		this.tickCounter = 0
+		this.grid = []
+		this.gameLog = []
+		this.moveLog = []
+		this.giveCount = 0
+		this.paused = false
+		this.gameOver = false
+		this.stepInterval = this.startStepInterval
+		this.tickLostTetromino = 0
+		this.lastX = 0
+		this.lastStep = 0
+		this.score = 0
+		this.scoreAnimationPromise = undefined
+		this.loseAnimationPromise = undefined
+		this.nextTetrominoType = this.getNextTetrominoType()
+		// reset playback if applicable
+		if (this.playbackInProgress) {
+			this.playbackInProgress.startTime = Date.now()
+			this.playbackInProgress.timeSpentAnimating = 0
+			this.playbackInProgress.timeSpentPaused = 0
+		}
+		this.onUpdate({score: 0, gameOver: false})
+	}
+
+	/**
+	 * visually plays the game back in the duration specified
+	 */
+	public playback(log: GameLog, max: number, duration: number, loop: boolean, animationTime = 300) {
+		console.log("*** playback started ***")
+
+		this.enableAsyncAnimations = true
+		this.muteSounds = true
+
+		const startPlayback = () =>
+			new Promise<void>((resolve, reject) => {
+				if (this.playbackInProgress) throw new Error("Already replaying.")
+				this.animationDurationBase = animationTime
+				this.playbackInProgress = {
+					log,
+					max,
+					duration,
+					startTime: Date.now(),
+					nextFrame: requestAnimationFrame(this.playbackFrame),
+					timeSpentAnimating: 0,
+					timeSpentPaused: 0,
+					done: () => {
+						// onDone()
+						resolve()
+					},
+					reject: () => reject(new Error("playback bailed early")),
+					assertRunning: () => true,
+					loop,
+				}
+				this.reset()
+			})
+
+		return startPlayback().finally(() => {
+			delete this.playbackInProgress
+		})
+	}
+
+	public replayNextTick(log: GameLog) {
+		const actions = log[this.tickCounter]
+		if (actions) {
+			if (actions.length > MAX_MOVES_PER_TICK) {
+				throw new Error("More moves this tick than the maximum allowed.")
+			}
+			for (const action of actions) {
+				// c++
+				switch (action) {
+					case 1: {
+						this.playerRotate()
+						continue
+					}
+					case 2: {
+						this.playerMoveRight()
+						continue
+					}
+					case 3: {
+						this.playerMoveLeft()
+						continue
+					}
+					case 4: {
+						this.playerSpeedUp()
+						continue
+					}
+					default:
+						throw new Error("Unknown action provided.")
+				}
+			}
+		}
+		this.tick()
+	}
+
 	/** returns `true` if terminate with game over, `false` if terminated early */
 	public replay(log: GameLog, max: number): boolean {
 		const t = performance.now()
-		this.enableAsyncAnimatedScoring = false
+		// this.enableAsyncAnimatedScoring = false
 		let n = 0
 		let c = 0
 		while (!this.gameOver) {
@@ -181,36 +394,8 @@ export class Game {
 				return false
 			}
 			n++
-			const actions = log[this.tickCounter]
-			if (actions) {
-				if (actions.length > MAX_MOVES_PER_TICK) {
-					throw new Error("More moves this tick than the maximum allowed.")
-				}
-				for (const action of actions) {
-					c++
-					switch (action) {
-						case 1: {
-							this.playerRotate()
-							continue
-						}
-						case 2: {
-							this.playerMoveRight()
-							continue
-						}
-						case 3: {
-							this.playerMoveLeft()
-							continue
-						}
-						case 4: {
-							this.playerSpeedUp()
-							continue
-						}
-						default:
-							throw new Error("Unknown action provided.")
-					}
-				}
-			}
-			this.tick()
+			if (log[this.tickCounter]) c += log[this.tickCounter].length
+			this.replayNextTick(log)
 		}
 		const timeTaken = performance.now() - t
 		console.log(
@@ -252,7 +437,7 @@ export class Game {
 	}
 
 	private drawCell(x: number, y: number, colorIndex: number) {
-		let [h, s, l] = this.colors[colorIndex - 1]
+		let [h, s, l] = this.colors[colorIndex]
 		if (this.animateRow && this.animateRow[0] === y) {
 			//
 			// draw an animating cell
@@ -322,7 +507,7 @@ export class Game {
 		// console.log("game log compression removed entries:", entries.length - filtered.length)
 	}
 
-	private enableAsyncAnimatedScoring = false
+	private enableAsyncAnimations = false
 
 	private step = () => {
 		const tetromino = this.tetromino
@@ -364,8 +549,8 @@ export class Game {
 				// score points:
 				const SCORE_BASE = 100
 				const SCORE_MULTIPLIER = 0.5 // + 50% for every line in-a-row
-				if (this.enableAsyncAnimatedScoring) {
-					;(async () => {
+				if (this.enableAsyncAnimations) {
+					this.scoreAnimationPromise = (async () => {
 						let multiplier = 1
 						let count = 0
 						for (let i = 0; i < this.grid.length; i++) {
@@ -389,10 +574,13 @@ export class Game {
 								count++
 								this.score += SCORE_BASE * multiplier
 								multiplier += SCORE_MULTIPLIER
+
 								this.onUpdate({score: this.score, gameOver: this.gameOver})
 							}
 						}
-					})()
+					})().finally(() => {
+						this.scoreAnimationPromise = undefined
+					})
 				} else {
 					let multiplier = 1
 					let count = 0
@@ -513,7 +701,7 @@ export class Game {
 					for (let j = 0; j < row.length; j++) {
 						const filled = row[j]
 						if (filled) {
-							let [h, s, l] = this.colors[color - 1]
+							let [h, s, l] = this.colors[color]
 							this.previewCtx.fillStyle = hsl([h, s, l])
 
 							const size = this.size
@@ -563,7 +751,7 @@ export class Game {
 					const col = row[j]
 					const x = j
 
-					if (col) {
+					if (col !== undefined && col !== null) {
 						this.drawCell(x, y, col)
 					}
 				}
@@ -584,6 +772,7 @@ export class Game {
 			"Tick: " + this.tickCounter,
 			"Drawn: " + Date.now(),
 			this.muteSounds ? "MUTE" : this.audioCtx ? "SOUND ON" : "SND N/A",
+			"BLOCK: " + (this.paused || this.animateRow || this.gameOver || this.moveLog.length >= MAX_MOVES_PER_TICK),
 		]
 		if (tetromino) {
 			const {type, xOrigin, yOrigin, rot} = tetromino
@@ -644,7 +833,8 @@ export class Game {
 		if (!this.gameOver) {
 			// put end game music here
 			const dist = 50
-			const count = 10
+			const count = 10 // there are always 10 rows
+
 			for (let i = 0; i < count; i++) {
 				this.soundBeep(9 - i, dist * i, dist)
 			}
@@ -657,15 +847,80 @@ export class Game {
 			if (this.previewCanvas) {
 				this.previewCanvas.width = this.previewCanvas.width
 			}
+
+			// const timePerY = (dist / count) * this.grid.length
+			// console.warn(">>>>>>", timePerY)
+
+			const totalTime = dist * count
+
+			if (this.enableAsyncAnimations) {
+				this.loseAnimationPromise = (async () => {
+					console.log("> loseAnimation running")
+
+					let filledCellCount = 0
+					for (let i = this.grid.length - 1; i >= 0; i--) {
+						const row = this.grid[i]
+						if (row) {
+							const n = row.length
+
+							for (let j = n - 1; j >= 0; j--) {
+								if (row[j]) {
+									filledCellCount++
+								}
+							}
+						}
+					}
+
+					for (let i = this.grid.length - 1; i >= 0; i--) {
+						const row = this.grid[i]
+						if (row) {
+							const n = row.length
+							const timePerX = totalTime / filledCellCount
+
+							for (let j = n - 1; j >= 0; j--) {
+								// const col = row[i]
+								if (row[j]) {
+									row[j] = 0
+									await sleep(timePerX)
+									// delete row[j]
+									// await sleep(250)
+								}
+							}
+							this.grid.splice(i, 1)
+							// await sleep(250)
+						}
+					}
+					// .
+				})().finally(() => {
+					console.log("< loseAnimation done")
+					delete this.loseAnimationPromise
+				})
+			}
 		}
 	}
 
 	/** @public */
 	public destroy() {
+		// console.warn("\n\n** GAME.DESTROY **\n\n", this)
+		const playback = this.playbackInProgress
+		if (playback) {
+			if (playback.nextFrame) {
+				console.log("cancelled next playback frame", playback.nextFrame)
+				cancelAnimationFrame(playback.nextFrame)
+			}
+			if (playback.reject) {
+				playback.reject()
+			}
+			delete this.playbackInProgress
+		} else {
+			console.warn("this game has no playback in progress to cancel")
+		}
 		if (this.nextFrame) {
 			cancelAnimationFrame(this.nextFrame)
 		}
 		clearInterval(this.tickInterval)
+		this.tickInterval = undefined
+		this.onUpdate = noop
 	}
 
 	private getTetrominoXMax(tetromino: NonNullable<typeof this.tetromino>) {
@@ -676,7 +931,10 @@ export class Game {
 
 	/** @public */
 	public playerRotate() {
-		if (this.moveLog.length >= MAX_MOVES_PER_TICK) return
+		if (this.moveLog.length >= MAX_MOVES_PER_TICK) {
+			console.warn("SUPPRESS PLAYER ACTION - rotate/spin")
+			return
+		}
 		if (this.paused || this.animateRow || this.gameOver) return
 		this.pushToMoveLog(1)
 		const tetromino = this.tetromino
@@ -703,7 +961,10 @@ export class Game {
 
 	/** @public */
 	public playerMoveRight() {
-		if (this.moveLog.length >= MAX_MOVES_PER_TICK) return
+		if (this.moveLog.length >= MAX_MOVES_PER_TICK) {
+			console.warn("SUPPRESS PLAYER ACTION - move right")
+			return
+		}
 		if (this.paused || this.animateRow || this.gameOver) return
 		this.pushToMoveLog(2)
 		const tetromino = this.tetromino
@@ -725,7 +986,10 @@ export class Game {
 
 	/** @public */
 	public playerMoveLeft() {
-		if (this.moveLog.length >= MAX_MOVES_PER_TICK) return
+		if (this.moveLog.length >= MAX_MOVES_PER_TICK) {
+			console.warn("SUPPRESS PLAYER ACTION - move left")
+			return
+		}
 		if (this.paused || this.animateRow || this.gameOver) return
 		this.pushToMoveLog(3)
 		const tetromino = this.tetromino
@@ -745,7 +1009,10 @@ export class Game {
 
 	/** @public */
 	public playerSpeedUp() {
-		if (this.moveLog.length >= MAX_MOVES_PER_TICK) return
+		if (this.moveLog.length >= MAX_MOVES_PER_TICK) {
+			console.warn("SUPPRESS PLAYER ACTION - speed up")
+			return
+		}
 		if (this.paused || this.animateRow || this.gameOver) return
 		this.pushToMoveLog(4)
 		this.step()

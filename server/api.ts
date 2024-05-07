@@ -4,9 +4,11 @@ import packageJSON from "../package.json" assert {type: "json"}
 import type {GameLog} from "src/tetris/Game.ts"
 import {replay} from "./simulator.ts"
 import {errors} from "util/errors.ts"
-import {addToScoreboard, calculateScoreboardPosition, getScoreboard} from "./scoreboard.ts"
+import {Scoreboard, addToScoreboard, calculateScoreboardPosition, getScoreboard} from "./scoreboard.ts"
 import {assertValid} from "./validate.ts"
-import {addToRuns} from "./runs.ts"
+import {addToRuns, getRunAtIndex} from "./runs.ts"
+import {censorUsername} from "./censor.ts"
+import semver from "semver"
 
 const {version} = packageJSON
 
@@ -18,8 +20,16 @@ async function list() {
 }
 
 /** fetch replay info for a specific run */
-async function get() {
-	throw errors.RUN_DOES_NOT_EXIST
+async function get(id: number) {
+	const run = await getRunAtIndex(id)
+	if (semver.satisfies(run.version, "<0.0.15")) {
+		throw errors.RUN_TOO_OLD
+	}
+	if (run) {
+		return {...run, username: censorUsername(run.username)}
+	} else {
+		throw errors.RUN_DOES_NOT_EXIST
+	}
 }
 
 /**

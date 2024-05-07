@@ -3,6 +3,10 @@
 	import {api} from "src/client/api.ts"
 	import PleaseWait from "./PleaseWait.svelte"
 	import AnimatedText from "./AnimatedText.svelte"
+	import LeaderboardGamePreview from "./LeaderboardGamePreview.svelte"
+	import type {ScoreboardResult} from "server/scoreboard"
+
+	export let playbackGame: (game: ScoreboardResult) => void | Promise<void>
 </script>
 
 <div class="leaderboard">
@@ -12,12 +16,17 @@
 		</span>
 	{:then list}
 		{#each list as item, index}
-			<div class="row">
+			<button
+				class="row"
+				on:click={() => {
+					playbackGame(item)
+				}}
+			>
 				<div class="index">{index + 1}</div>
 				<div class="name">{item.username}</div>
 				<div class="score">{item.score}</div>
-				<!-- <button type="button">Replay</button> -->
-			</div>
+				<LeaderboardGamePreview grid={item.grid} />
+			</button>
 		{/each}
 	{:catch err}
 		<span class="error"><AnimatedText text={err} /></span>
@@ -31,9 +40,11 @@
 		.row {
 			display: grid;
 			// grid-template-columns: 2em auto 5em 2em;
-			grid-template-columns: 2em auto 5em;
-			padding: 0.6em 0.5em;
+			grid-template-columns: 2em auto 5em 2em;
+			padding-left: 0.5em;
 			align-items: center;
+			width: 100%;
+			text-align: left;
 
 			&:nth-child(even) {
 				background: #111;
@@ -70,8 +81,6 @@
 			background: none;
 			border: none;
 			font: inherit;
-			font-size: 0.5em;
-			height: 5em;
 
 			&:focus {
 				color: yellow;

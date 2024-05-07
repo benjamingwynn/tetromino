@@ -10,6 +10,11 @@
 	import "./font/RedAlert.css"
 	import AnimatedText from "./components/AnimatedText.svelte"
 	import Leaderboard from "./components/Leaderboard.svelte"
+	import Confirm from "./components/Confirm.svelte"
+	import {ScoreboardResult} from "server/scoreboard"
+	import api from "./client/api"
+	import {StoredRun} from "server/runs"
+	import {noop, sleep} from "util/util"
 
 	let canvas: HTMLCanvasElement
 	let altCanvas: HTMLCanvasElement
@@ -28,15 +33,14 @@
 			enableAudio: false,
 			seed: game.seed,
 		})
-		// game2.playerToggleDebug()
 		const success = game2.replay(game.gameLog, game.getTicks())
 		const score = game2.getScore()
 		if (success && score === _score) {
-			// console.log("**** SUCCESS!! ****")
+			console.log("**** SUCCESS!! ****")
 			// canvas.style.borderColor = "green"
 			altCanvas.style.borderColor = "green"
 		} else if (!success && score === _score) {
-			// console.warn("**** NON-SUCCESS BUT MATCHING SCORE!! ****")
+			console.warn("**** NON-SUCCESS BUT MATCHING SCORE!! ****")
 			canvas.style.borderColor = "orange"
 			altCanvas.style.borderColor = "orange"
 		} else {
@@ -46,7 +50,6 @@
 			altCanvas.hidden = false
 		}
 		// console.log("game2=", game2)
-		window.game2 = game2
 		requestAnimationFrame(() => {
 			game2.destroy()
 		})
@@ -55,6 +58,10 @@
 	const newGame = () => {
 		// altCanvas.hidden = true
 		touchSubmitScoreStage2 = false
+		replay = undefined
+		replayLoading = false
+		replayError = undefined
+		_score = 0
 		touchStop()
 		canvas.style.borderColor = ""
 		if (game) game.destroy()
@@ -69,6 +76,7 @@
 					//
 					// on game over...
 					//
+					game.onUpdate = noop
 
 					// lock the retry button for a small white so we don't accidentally click it
 					lockTouchRetry = true
@@ -86,7 +94,24 @@
 			previewCanvas,
 		})
 		game.play()
-		window.game = game
+	}
+
+	const onGameOver = () => {
+		const gameLog = structuredClone(game.gameLog)
+		const ticks = game.getTicks()
+		const _game = game
+
+		if (!game.loseAnimationPromise) {
+			throw new Error("expected lose animation to be running on game over")
+		}
+
+		// start repeating playback after lose animation
+		game.loseAnimationPromise.then(() => {
+			if (game !== _game) return // make sure this is the same game (e.g. game not reset during lose animation)
+			game.playback(gameLog, ticks + 1, Math.min(30_000, Math.max(3_000, ticks * 1)), true).catch((err) => {
+				console.log(">>>>>> PLAYBACK TERMINATED <<<<<<<<", err)
+			})
+		})
 	}
 
 	let nextTouchSpeedUp: ReturnType<typeof setTimeout> | undefined = undefined
@@ -115,15 +140,103 @@
 	let touchControlSwap = !!localStorage.touchControlSwap
 	let lockTouchSubmitScore = true
 	let touchSubmitScoreStage2 = false
-	$: game && (game.muteSounds = gameMute)
-	$: game && (game.paused = paused || showTouchSettings || showLeaderboard)
+	$: game && (game.muteSounds = gameMute || !!replay || _gameOver)
+	$: game && (game.paused = paused || showTouchSettings || (showLeaderboard && !replay))
 	$: localStorage.mute = gameMute ? 1 : ""
 	$: localStorage.touchControlSwap = touchControlSwap ? 1 : ""
 	$: localStorage.highScore = _highScore
 
 	// make sure we don't get stuck in the settings screen
 	$: if (!showTouchControls) showTouchSettings = false
+
+	let confirmStuff: {body: string; callback: (confirm: boolean) => void} | undefined = undefined
+	// let playback: {error?: string; inProgress?: Promise<void>} | false = false
+	let replay: StoredRun | undefined = undefined
+	let replayLoading = false
+	let replayError: string | undefined = undefined
+
+	const playbackGame = async (result: ScoreboardResult) => {
+		const shouldContinue = await new Promise((resolve) => {
+			const callback = (b: boolean) => {
+				confirmStuff = undefined
+				console.warn(">>>>>>>CALLBACK>>>>>>>>", b)
+				resolve(b)
+			}
+			confirmStuff = {body: "Playing back a game will cause your current game to end!\n\nPlay/pause/speed control are not available yet.", callback}
+		})
+		if (!shouldContinue) {
+			console.log("user bailed from replaying game")
+			return
+		}
+
+		// hide the leaderboard
+		showLeaderboard = false
+
+		_gameOver = false
+
+		// destroy the existing game
+		game.destroy()
+
+		// we're now in a loading state
+		replayLoading = true
+
+		try {
+			// fetch the full replay
+			const _replay = await api.get(result.id)
+			replay = _replay
+
+			// setup the game
+			replayLoading = false
+
+			game = new Game({
+				canvas,
+				enableAudio: false,
+				previewCanvas,
+				seed: replay.seed,
+				onUpdate: ({score, gameOver}) => {
+					_score = score
+				},
+			})
+
+			const animationSpeed = (1 / replay.score) * 250_000
+			await game.playback(replay.log, replay.ticks, 60_000, true, animationSpeed)
+		} catch (err) {
+			console.error(err)
+			if (typeof err === "string") {
+				replayError = err
+			}
+		}
+	}
+
+	// @ts-expect-error export currently mounted game to window for debugging
+	$: window.game = game
 </script>
+
+{#if replayError}
+	<div class="replayError">
+		<h1>replayError</h1>
+		<h2>{replayError}</h2>
+
+		<button
+			on:contextmenu|preventDefault
+			type="button"
+			class="action long"
+			tabindex="-1"
+			on:click={() => {
+				newGame()
+				showLeaderboard = true
+			}}>Back to leaderboard</button
+		>
+	</div>
+{/if}
+
+{#if replayLoading}
+	<h1>loading playback, please wait</h1>
+{/if}
+
+{#if confirmStuff}
+	<Confirm body={confirmStuff.body} callback={confirmStuff.callback} />
+{/if}
 
 <svelte:window
 	on:keydown={(ev) => {
@@ -137,12 +250,16 @@
 		}
 
 		if (ev.key === " " || ev.key === "ArrowUp" || ev.key === "w") {
+			if (replay) return
 			game.playerRotate()
 		} else if (ev.key === "ArrowRight" || ev.key === "d") {
+			if (replay) return
 			game.playerMoveRight()
 		} else if (ev.key === "ArrowLeft" || ev.key === "a") {
+			if (replay) return
 			game.playerMoveLeft()
 		} else if (ev.key === "ArrowDown" || ev.key === "s") {
+			if (replay) return
 			game.playerSpeedUp()
 		} else if (ev.key === "r" || ev.key === "Escape") {
 			// reset
@@ -166,12 +283,21 @@
 	}}
 />
 
-<div class="app primary" hidden={showTouchSettings || (showLeaderboard && showTouchControls)} class:dead={_gameOver} class:touch={showTouchControls}>
+<div
+	class="app primary"
+	hidden={showTouchSettings || (showLeaderboard && showTouchControls)}
+	class:dead={_gameOver}
+	class:touch={showTouchControls}
+	class:replay={!!replay}
+>
 	<main
 		on:contextmenu|preventDefault
 		on:touchstart={(ev) => {
 			if (ev.target.tagName !== "INPUT") {
 				ev.preventDefault()
+			}
+			if (_gameOver || replay) {
+				return
 			}
 			showTouchControls = true
 			if (touchControlSwap) {
@@ -188,12 +314,13 @@
 		}}
 	>
 		<div class="game">
-			<canvas width="100px" height="200px" bind:this={canvas} />
+			<canvas width="100px" height="200px" bind:this={canvas} class:notPlaying={paused || _gameOver || !!replay} />
 			<canvas width="100px" height="200px" bind:this={altCanvas} hidden />
 		</div>
 
 		{#if _gameOver}
 			<GameOver
+				{onGameOver}
 				{game}
 				{newGame}
 				{_score}
@@ -205,9 +332,13 @@
 			/>
 		{/if}
 		<div class="stats" hidden={_gameOver}>
-			<div class="scoreboard">
-				<h5>TOP</h5>
-				<HighScore score={_highScore} />
+			<div class="scoreboard highScore">
+				{#if replay}
+					<h5>PLAYING<br />BACK</h5>
+				{:else}
+					<h5>TOP</h5>
+					<HighScore score={_highScore} />
+				{/if}
 			</div>
 			<div class="scoreboard">
 				<h5>SCORE</h5>
@@ -229,15 +360,15 @@
 							paused = !paused //
 						}}>{paused ? "UN <P>AUSE" : "<P>AUSE"}</button
 					>
+
 					<button
 						on:contextmenu|preventDefault
 						type="button"
 						class="action"
-						class:active={gameMute}
 						tabindex="-1"
 						on:click={() => {
-							gameMute = !gameMute
-						}}>{gameMute ? "UN <M>UTE" : "<M>UTE"}</button
+							newGame()
+						}}>&lt;R&gt;ESET</button
 					>
 				</div>
 
@@ -251,20 +382,43 @@
 						showLeaderboard = true
 					}}>&lt;L&gt;EADERBOARD</button
 				>
+
+				{#if !replay}
+					<button
+						on:contextmenu|preventDefault
+						type="button"
+						class="action long"
+						class:active={gameMute}
+						tabindex="-1"
+						on:click={() => {
+							gameMute = !gameMute
+						}}>{gameMute ? "UN <M>UTE" : "<M>UTE"}</button
+					>
+				{/if}
 			{/if}
 		</div>
 		<div class="about">
 			<div class="about-inner">
-				<h4>Benjamin's Tetris v{version}</h4>
-				<h5>A mostly competent port of tetris written by Benjamin Gwynn</h5>
-				{#if !showTouchControls}
-					<h5>Move with A/D or left/right arrows, down/S to speed up, up/W/space to spin.</h5>
+				{#if replay}
+					{@const sec = Math.floor((replay.ticks * 20) / 1000)}
+					<h2>{replay.username}</h2>
+					<h3>
+						scored {replay.score} points in {Math.floor(sec / 60)
+							.toString()
+							.padStart(2, "0")} min {(sec % 60).toString().padStart(2, "0")} sec
+					</h3>
+				{:else}
+					<h4>Benjamin's Tetris v{version}</h4>
+					<h5>A mostly competent port of tetris written by Benjamin Gwynn</h5>
+					{#if !showTouchControls}
+						<h5>Move with A/D or left/right arrows, down/S to speed up, up/W/space to spin.</h5>
+					{/if}
 				{/if}
 			</div>
 		</div>
 	</main>
 
-	<div class="touchFloat left" hidden={!showTouchControls || _gameOver}>
+	<div class="touchFloat left" hidden={!showTouchControls || _gameOver || !!replay}>
 		<button
 			on:contextmenu|preventDefault
 			type="button"
@@ -292,19 +446,33 @@
 	</div>
 
 	<div class="touchFloat right" hidden={!showTouchControls}>
-		<button
-			on:contextmenu|preventDefault
-			class="action"
-			type="button"
-			tabindex="-1"
-			on:touchend={touchStop}
-			on:touchcancel={touchStop}
-			on:touchstart|preventDefault={() => {
-				//
-				showTouchSettings = !showTouchSettings
-				// game.playerToggleDebug()
-			}}>SETTINGS</button
-		>
+		{#if replay}
+			<button
+				on:contextmenu|preventDefault
+				class="action"
+				type="button"
+				tabindex="-1"
+				on:touchend={touchStop}
+				on:touchcancel={touchStop}
+				on:touchstart|preventDefault={() => {
+					newGame()
+				}}>X</button
+			>
+		{:else}
+			<button
+				on:contextmenu|preventDefault
+				class="action"
+				type="button"
+				tabindex="-1"
+				on:touchend={touchStop}
+				on:touchcancel={touchStop}
+				on:touchstart|preventDefault={() => {
+					//
+					showTouchSettings = !showTouchSettings
+					// game.playerToggleDebug()
+				}}>SETTINGS</button
+			>
+		{/if}
 		<button
 			on:contextmenu|preventDefault
 			class="action"
@@ -334,7 +502,7 @@
 			{/if}
 		</div> -->
 	{/if}
-	<div class="touchControls" hidden={!showTouchControls}>
+	<div class="touchControls" hidden={!(showTouchControls && !replay && !replayLoading)}>
 		{#if _gameOver}
 			<button
 				on:contextmenu|preventDefault
@@ -468,7 +636,7 @@
 		</div>
 
 		{#if showLeaderboard}
-			<Leaderboard />
+			<Leaderboard {playbackGame} />
 		{/if}
 	</div>
 {:else}
@@ -479,7 +647,7 @@
 		</div>
 
 		{#if showLeaderboard}
-			<Leaderboard />
+			<Leaderboard {playbackGame} />
 		{/if}
 
 		<div class="bottom">
@@ -681,6 +849,10 @@
 		image-rendering: -moz-crisp-edges;
 		image-rendering: crisp-edges;
 		image-rendering: pixelated;
+
+		&.notPlaying {
+			border-color: #333;
+		}
 	}
 
 	.stats {
@@ -879,5 +1051,33 @@
 		height: 6rem;
 		width: 6rem;
 		border-color: #444;
+	}
+
+	.app.replay {
+		// .scoreboard {
+		// }
+
+		// .highScore {
+		// 	display: none;
+		// }
+	}
+
+	.replayError {
+		position: fixed;
+		top: 0;
+		left: 0;
+		bottom: 0;
+		right: 0;
+		background: rgba(0, 0, 0, 0.8);
+		display: flex;
+		height: 100%;
+		width: 100%;
+		flex-flow: column nowrap;
+		justify-content: center;
+		align-items: center;
+		text-align: center;
+		padding: 0 1em;
+		gap: 0.5em;
+		z-index: 2;
 	}
 </style>

@@ -10,5 +10,6 @@ export const errors = {
 	BAD_USERNAME: "your username is invalid",
 	TOO_MUCH_DATA: "the server couldn't handle your entire submission",
 	RUN_DOES_NOT_EXIST: "this score is not available to be played back",
+	RUN_TOO_OLD: "this game cannot be replayed because it was done in an earlier version of the game",
 	CLIENT_PARSE_ERROR: "could not understand the response from the server",
 } as const
