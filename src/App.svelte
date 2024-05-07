@@ -172,6 +172,7 @@
 		// hide the leaderboard
 		showLeaderboard = false
 
+		paused = false
 		_gameOver = false
 
 		// destroy the existing game
