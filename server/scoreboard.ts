@@ -10,7 +10,7 @@ import {censorUsername} from "./censor.ts"
 type ScoreboardEntry = [number, number, number | undefined]
 type DeathGrid = number[][]
 
-const MAX_SCOREBOARD_SIZE = 20
+const MAX_SCOREBOARD_SIZE = 50
 
 const initScoreboard = async (): Promise<ScoreboardEntry[]> => []
 const initDeathGrid = async (): Promise<DeathGrid[]> => []
