@@ -65,6 +65,9 @@ export async function calculateScoreboardPosition(score: number): Promise<number
 		console.log("(there are no scores)")
 		return 1
 	}
+	if (scores.length < MAX_SCOREBOARD_SIZE) {
+		return scores.length + 1
+	}
 	if (score >= smallestScore[0]) {
 		// congrats!
 		// we now need to figure out where you'd be in the scoreboard
@@ -73,9 +76,6 @@ export async function calculateScoreboardPosition(score: number): Promise<number
 			if (score > leaderboardScore) {
 				return i + 1
 			}
-		}
-		if (scores.length < MAX_SCOREBOARD_SIZE) {
-			return scores.length + 1
 		}
 	}
 
