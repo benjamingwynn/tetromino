@@ -457,7 +457,7 @@
 				on:touchcancel={touchStop}
 				on:touchstart|preventDefault={() => {
 					newGame()
-				}}>X</button
+				}}>NEW GAME</button
 			>
 		{:else}
 			<button
