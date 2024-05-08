@@ -5,8 +5,15 @@ import RandomNumberGenerator from "mersenne-twister"
 import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./tetrominoes.ts"
 // import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./debug_tetrominoes.ts"
 
+const hslCache = new WeakMap<number[], string>()
 function hsl(stuff: number[]) {
-	return `hsl(${stuff.map((x, i) => (i > 0 ? x + "%" : x)).join(" ")})`
+	const cached = hslCache.get(stuff)
+	if (cached) {
+		return cached
+	}
+	const rtn = `hsl(${stuff.map((x, i) => (i > 0 ? x + "%" : x)).join(" ")})`
+	hslCache.set(stuff, rtn)
+	return rtn
 }
 
 type Tetromino = {
