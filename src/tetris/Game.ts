@@ -3,6 +3,7 @@
 import {noop, sleep} from "util/util.ts"
 import RandomNumberGenerator from "mersenne-twister"
 import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./tetrominoes.ts"
+import {setInterval, clearInterval} from "./frameSetInterval.ts"
 // import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./debug_tetrominoes.ts"
 
 const hslCache = new WeakMap<number[], string>()
@@ -89,7 +90,11 @@ export class Game {
 	private audioCtx?: AudioContext
 	private oscillatorGainNode?: GainNode
 	private previewCtx?: CanvasRenderingContext2D
-	private tickInterval?: ReturnType<typeof setTimeout>
+	private tickInterval?: ReturnType<typeof setInterval>
+	private expectedNextTickTime?: number
+	private tickMsBehind?: number
+	private tickMsBehindMin?: number
+	private tickMsBehindMax?: number
 
 	private canvas?: HTMLCanvasElement = undefined
 	private previewCanvas?: HTMLCanvasElement = undefined
@@ -176,8 +181,22 @@ export class Game {
 	public play() {
 		this.paused = false
 		this.enableAsyncAnimations = true
+
+		// BODGE THIS BACK TO 0 SO WE ONLY COUNT SKIPPED FRAMES FOR *THIS* GAME
+		// NOTE: this will be removed when the debug print for _totalSkippedFrameIntervals is removed
+		globalThis._totalSkippedFrameIntervals = 0
+
 		this.tickInterval = setInterval(() => {
+			const now = Date.now()
+			if (this.expectedNextTickTime) {
+				const msBehind = now - this.expectedNextTickTime
+
+				this.tickMsBehind = msBehind
+				this.tickMsBehindMax = Math.max(this.tickMsBehindMax ?? 0, msBehind)
+				this.tickMsBehindMin = Math.min(this.tickMsBehindMin ?? Infinity, msBehind)
+			}
 			this.tick()
+			this.expectedNextTickTime = now + 20
 		}, 20)
 	}
 
@@ -286,10 +305,16 @@ export class Game {
 
 	private reset() {
 		// if (this.playbackInProgress) throw new Error("cannot reset while playback in progress")
-		if (this.loseAnimationPromise || this.scoreAnimationPromise) throw new Error("running animation while asked to reset :(")
+		if (this.loseAnimationPromise || this.scoreAnimationPromise) {
+			console.error("running animation while asked to reset :(")
+		}
 		if (this.tickInterval) {
 			console.warn("reset() stopped running tickInterval")
 			clearInterval(this.tickInterval)
+			this.expectedNextTickTime = undefined
+			this.tickMsBehind = undefined
+			this.tickMsBehindMax = undefined
+			this.tickMsBehindMin = undefined
 			this.tickInterval = undefined
 		}
 		this.tetromino = undefined
@@ -574,6 +599,7 @@ export class Game {
 
 								// wait a little while
 								await sleep(this.animationDuration)
+								if (!this.scoreAnimationPromise) return
 
 								this.animateRow = undefined
 								this.grid.splice(i, 1)
@@ -769,17 +795,20 @@ export class Game {
 		const tetromino = this.tetromino
 
 		const debug: string[] = [
-			this.paused ? `PAUSED` : `Running`,
-			"Score: " + this.score,
-			this.gameOver ? "GAME OVER" : "Playing",
-			this.animateRow?.join(",") ?? "-",
-			"Given: " + this.giveCount,
+			// this.paused ? `PAUSED` : `Running`,
+			// this.gameOver ? "GAME OVER" : "Game in progress",
 			"Seed: " + this.seed,
-			"Interval:" + this.stepInterval,
-			"Tick: " + this.tickCounter,
-			"Drawn: " + Date.now(),
+			"Step: " + this.stepInterval + " Given: " + this.giveCount,
 			this.muteSounds ? "MUTE" : this.audioCtx ? "SOUND ON" : "SND N/A",
-			"BLOCK: " + (this.paused || this.animateRow || this.gameOver || this.moveLog.length >= MAX_MOVES_PER_TICK),
+			"Tick #: " + this.tickCounter,
+			// "BLOCK: " + (this.paused || this.animateRow || this.gameOver || this.moveLog.length >= MAX_MOVES_PER_TICK),
+			"Behind: " + this.tickMsBehind,
+			" Max: " + this.tickMsBehindMax,
+			" Min: " + this.tickMsBehindMin,
+			// hack in the _totalSkippedFrameIntervals so we can see it on mobile, we reset this to 0 when starting ticks on a game
+			" Skipped: " + window._totalSkippedFrameIntervals,
+			"Drawn: " + Date.now(),
+			this.animateRow?.join(",") ?? "-",
 		]
 		if (tetromino) {
 			const {type, xOrigin, yOrigin, rot} = tetromino
@@ -795,7 +824,7 @@ export class Game {
 					}
 				}
 			}
-			debug.push(`tetromino=${tetromino}`)
+			debug.push(`tetromino=${Object.values(tetromino)}`)
 		}
 
 		// draw debug boxes
@@ -889,6 +918,7 @@ export class Game {
 								if (row[j]) {
 									row[j] = 0
 									await sleep(timePerX)
+									if (!this.loseAnimationPromise) return
 									// delete row[j]
 									// await sleep(250)
 								}
@@ -925,7 +955,10 @@ export class Game {
 		if (this.nextFrame) {
 			cancelAnimationFrame(this.nextFrame)
 		}
-		clearInterval(this.tickInterval)
+		if (this.tickInterval) {
+			clearInterval(this.tickInterval)
+		}
+		this.expectedNextTickTime = undefined
 		this.tickInterval = undefined
 		this.onUpdate = noop
 	}
