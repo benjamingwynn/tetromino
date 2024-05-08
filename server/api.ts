@@ -1,7 +1,7 @@
 /** @format */
 
 import packageJSON from "../package.json" assert {type: "json"}
-import type {GameLog} from "src/tetris/Game.ts"
+import type {GameLog} from "src/game/Game.ts"
 import {replay} from "./simulator.ts"
 import {errors} from "util/errors.ts"
 import {Scoreboard, addToScoreboard, calculateScoreboardPosition, getScoreboard} from "./scoreboard.ts"

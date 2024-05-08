@@ -1,5 +1,5 @@
 /** @format */
-import type {GameLog} from "src/tetris/Game.ts"
+import type {GameLog} from "src/game/Game.ts"
 import {datastore} from "./datastore.ts"
 
 export type StoredRun = {log: GameLog; seed: number; score: number; ticks: number; version: string; username: string}

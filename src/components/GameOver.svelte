@@ -5,7 +5,7 @@
 	import {version} from "../../package.json"
 	import AnimatedText from "./AnimatedText.svelte"
 	import PleaseWait from "./PleaseWait.svelte"
-	import type {Game} from "src/tetris/Game.ts"
+	import type {Game} from "src/game/Game"
 	import {MAX_USERNAME_LENGTH, isValidUsername} from "server/validate.ts"
 
 	export let game: Game

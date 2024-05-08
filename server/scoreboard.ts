@@ -1,6 +1,6 @@
 /** @format */
 
-import {GameLog} from "src/tetris/Game.ts"
+import {GameLog} from "src/game/Game.ts"
 import {datastore} from "./datastore.ts"
 import {getRunAtIndex} from "./runs.ts"
 import {generateGrid, replay} from "./simulator.ts"

@@ -9,8 +9,8 @@ export const buildOptions: BuildOptions = {
 	entryPoints: ["./src/index.html"],
 	minify: false,
 	banner: {
-		js: `/* https://github.com/benjamingwynn/tetris */`,
-		css: `/* https://github.com/benjamingwynn/tetris */`,
+		js: `/* https://github.com/benjamingwynn/tetromino */`,
+		css: `/* https://github.com/benjamingwynn/tetromino */`,
 	},
 	outdir: "dist",
 	assetNames: "assets/[name]-[hash]",

@@ -1,6 +1,6 @@
 <!-- @format -->
 <script lang="ts">
-	import {Game} from "src/tetris/Game.ts"
+	import {Game} from "src/game/Game"
 	import {onMount} from "svelte"
 
 	let canvas: HTMLCanvasElement

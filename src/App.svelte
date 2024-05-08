@@ -5,7 +5,7 @@
 	import HighScore from "./components/HighScore.svelte"
 	import TouchButton from "./components/TouchButton.svelte"
 	import GameOver from "./components/GameOver.svelte"
-	import {Game} from "./tetris/Game"
+	import {Game} from "./game/Game"
 	import {version} from "../package.json"
 	import "./font/RedAlert.css"
 	import AnimatedText from "./components/AnimatedText.svelte"
@@ -209,6 +209,8 @@
 		}
 	}
 
+	const aboutText = `a competitive falling shape game written by Benjamin Gwynn`
+
 	// @ts-expect-error export currently mounted game to window for debugging
 	$: window.game = game
 </script>
@@ -409,8 +411,8 @@
 							.padStart(2, "0")} min {(sec % 60).toString().padStart(2, "0")} sec
 					</h3>
 				{:else}
-					<h4>Benjamin's Tetris v{version}</h4>
-					<h5>A mostly competent port of tetris written by Benjamin Gwynn</h5>
+					<h4>Benjamin's Tetromino Game v{version}</h4>
+					<h5>{aboutText}</h5>
 					{#if !showTouchControls}
 						<h5>Move with A/D or left/right arrows, down/S to speed up, up/W/space to spin.</h5>
 					{/if}
@@ -606,9 +608,9 @@
 	</fieldset>
 
 	<hr />
-	<fieldset>a mostly competent port of tetris written by Benjamin Gwynn</fieldset>
+	<fieldset>{aboutText}</fieldset>
 	<fieldset>
-		<a href="https://github.com/benjamingwynn/tetris" target="_blank">
+		<a href="https://github.com/benjamingwynn/tetromino" target="_blank">
 			<span>view project on Github</span>
 			<span class="go">&gt;</span>
 		</a>

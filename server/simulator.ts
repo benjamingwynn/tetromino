@@ -1,6 +1,6 @@
 /** @format */
 
-import {Game, GameLog} from "src/tetris/Game.ts"
+import {Game, GameLog} from "src/game/Game.ts"
 import semver from "semver"
 
 /** returns boolean if successful */
