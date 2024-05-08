@@ -13,6 +13,7 @@ const ctx = await esbuild.context({
 	...buildOptions,
 	outdir,
 	sourcemap: true,
+	define: {DEV: "true"},
 })
 
 ctx.watch()

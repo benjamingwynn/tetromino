@@ -19,6 +19,6 @@
 		"resolveJsonModule": true,
 		"noEmit": true
 	},
-	"include": ["src", "./*.ts", "util/", "server/"],
+	"include": ["src", "./*.ts", "util/", "server/", "esTypes.d.ts"],
 	"references": []
 }

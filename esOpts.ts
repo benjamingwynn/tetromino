@@ -34,4 +34,5 @@ export const buildOptions: BuildOptions = {
 			compilerOptions: {},
 		}),
 	],
+	define: {DEV: "false"},
 }
