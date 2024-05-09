@@ -12,7 +12,7 @@
  */
 
 const openTimers: Record<number, {callback: () => void; interval: number; timeStarted: number; fireCount: number; skipCount: 0}> = {}
-let lastHandlerId = 0
+let lastHandlerId = 1
 
 // NOTE: this is just a debug counter, we echo this onto the game's debug text and reset it back to 0. we won't be keeping this.
 globalThis._totalSkippedFrameIntervals = 0
