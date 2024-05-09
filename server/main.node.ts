@@ -33,7 +33,7 @@ const handler = async (
 		throw new Error(`Route ("${key}") not registered.`)
 	}
 
-	console.log("*", `<${req.headers["X-Forwarded-For"] ?? "???.???.???.???"}>`, req.method, req.url)
+	console.log("*", `<${req.headers["x-forwarded-for"] ?? "???.???.???.???"}>`, req.method, req.url)
 
 	if (req.headers["content-type"] !== "application/json") {
 		throw new Error("Invalid content type")
