@@ -744,7 +744,11 @@
 			display: grid;
 			grid-template-columns: 1fr 2em;
 			border: none;
-			padding: 0.5em 0.6em;
+			padding: 1em 0.6em;
+
+			&:nth-child(even) {
+				background: #111;
+			}
 
 			a {
 				display: contents;
