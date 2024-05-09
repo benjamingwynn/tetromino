@@ -1,8 +1,8 @@
 {
 	"$schema": "https://json.schemastore.org/web-manifest-combined.json",
-	"name": "Tetromino Game",
+	"name": "Benjamin's Tetromino Game",
 	"short_name": "Tetromino",
-	"description": "Tetromino Game",
+	"description": "A competitive game with falling tetrominoes and an online leaderboard.",
 	"start_url": "/",
 	"display": "standalone",
 	"background_color": "#000000",
