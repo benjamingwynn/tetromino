@@ -14,7 +14,7 @@
 	},
 	"engineStrict": true,
 	"devDependencies": {
-		"@chialab/esbuild-plugin-html": "^0.18.2",
+		"@chialab/esbuild-plugin-html": "benjamingwynn/esbuild-plugin-html",
 		"@types/mersenne-twister": "^1.1.7",
 		"@types/node": "20",
 		"@types/semver": "^7.5.8",

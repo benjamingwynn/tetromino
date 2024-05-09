@@ -2,19 +2,16 @@
 
 import esbuild from "esbuild"
 import * as fsp from "node:fs/promises"
-import {buildOptions} from "./esOpts.ts"
+import {makeBuildOptions} from "./esOpts.ts"
+
+const buildOptions = makeBuildOptions(true)
 
 // HACK: wait arbitrary amount of time, if node.js ran with `--watch` since the last port still may be bound to the going down process
 await new Promise<void>((resolve) => setTimeout(resolve, 1000))
 
-const outdir = ".esdev"
+const outdir = buildOptions.outdir
 await fsp.rm(outdir, {recursive: true, force: true})
-const ctx = await esbuild.context({
-	...buildOptions,
-	outdir,
-	sourcemap: true,
-	define: {DEV: "true"},
-})
+const ctx = await esbuild.context(buildOptions)
 
 ctx.watch()
 

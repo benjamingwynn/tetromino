@@ -6,8 +6,8 @@ settings:
 
 devDependencies:
   '@chialab/esbuild-plugin-html':
-    specifier: ^0.18.2
-    version: 0.18.2(htmlnano@2.1.1)
+    specifier: benjamingwynn/esbuild-plugin-html
+    version: github.com/benjamingwynn/esbuild-plugin-html/ae312e62a6ad77fb7703a19fbcc3adeef36ac723(htmlnano@2.1.1)
   '@types/mersenne-twister':
     specifier: ^1.1.7
     version: 1.1.7
@@ -22,7 +22,7 @@ devDependencies:
     version: 1.0.0
   bests:
     specifier: benjamingwynn/bests
-    version: github.com/benjamingwynn/bests/a609bb4f9e198038c819a299de0abcded465915b
+    version: github.com/benjamingwynn/bests/ba7fed2358a22b4e2892d06230cfcdf6883312dc
   deep-profanity-filter:
     specifier: ^2.3.3
     version: 2.3.3
@@ -88,19 +88,6 @@ packages:
       chalk: 2.4.2
       js-tokens: 4.0.0
       picocolors: 1.0.0
-    dev: true
-
-  /@chialab/esbuild-plugin-html@0.18.2(htmlnano@2.1.1):
-    resolution: {integrity: sha512-8dBqIZIL1tkLYyMko+HY8b80QoDOIGlydbIQO8ALLv4e59UO0MGQjFG3RCD0V5sMbpjeNrJ3MCKz29wGL16Wrg==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      htmlnano: ^2.0.0
-    peerDependenciesMeta:
-      htmlnano:
-        optional: true
-    dependencies:
-      '@chialab/esbuild-rna': 0.18.2
-      htmlnano: 2.1.1(typescript@5.4.5)
     dev: true
 
   /@chialab/esbuild-rna@0.18.2:
@@ -643,8 +630,8 @@ packages:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
     dev: true
 
-  /get-tsconfig@4.7.3:
-    resolution: {integrity: sha512-ZvkrzoUA0PQZM6fy6+/Hce561s+faD1rsNwhnO5FelNjyy7EMGJ3Rz1AQ8GYDWjhRs/7dBLOEJvhK8MiEJOAFg==}
+  /get-tsconfig@4.7.4:
+    resolution: {integrity: sha512-ofbkKj+0pjXjhejr007J/fLf+sW+8H7K5GCm+msC8q3IpvgjobpyPqSRFemNyIMxklC0zeJpi7VDFna19FacvQ==}
     dependencies:
       resolve-pkg-maps: 1.0.0
     dev: true
@@ -1153,8 +1140,8 @@ packages:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
     dev: true
 
-  github.com/benjamingwynn/bests/a609bb4f9e198038c819a299de0abcded465915b:
-    resolution: {tarball: https://codeload.github.com/benjamingwynn/bests/tar.gz/a609bb4f9e198038c819a299de0abcded465915b}
+  github.com/benjamingwynn/bests/ba7fed2358a22b4e2892d06230cfcdf6883312dc:
+    resolution: {tarball: https://codeload.github.com/benjamingwynn/bests/tar.gz/ba7fed2358a22b4e2892d06230cfcdf6883312dc}
     name: bests
     version: 0.0.3
     engines: {node: '>=18'}
@@ -1162,5 +1149,22 @@ packages:
     hasBin: true
     dependencies:
       esbuild: 0.20.2
-      get-tsconfig: 4.7.3
+      get-tsconfig: 4.7.4
+    dev: true
+
+  github.com/benjamingwynn/esbuild-plugin-html/ae312e62a6ad77fb7703a19fbcc3adeef36ac723(htmlnano@2.1.1):
+    resolution: {tarball: https://codeload.github.com/benjamingwynn/esbuild-plugin-html/tar.gz/ae312e62a6ad77fb7703a19fbcc3adeef36ac723}
+    id: github.com/benjamingwynn/esbuild-plugin-html/ae312e62a6ad77fb7703a19fbcc3adeef36ac723
+    name: '@chialab/esbuild-plugin-html'
+    version: 0.18.1
+    engines: {node: '>=18'}
+    peerDependencies:
+      htmlnano: ^2.0.0
+    peerDependenciesMeta:
+      htmlnano:
+        optional: true
+    dependencies:
+      '@chialab/esbuild-rna': 0.18.2
+      '@chialab/node-resolve': 0.18.0
+      htmlnano: 2.1.1(typescript@5.4.5)
     dev: true
