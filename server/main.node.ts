@@ -5,7 +5,7 @@ import {api} from "./api.ts"
 import {errors} from "util/errors.ts"
 
 const keys = Object.keys(api)
-const MAX_LENGTH = 1_600_000
+const MAX_LENGTH = 1024 * 1024 // max 1024K payload
 
 // HACK: wait arbitrary amount of time, if node.js ran with `--watch` since the last port still may be bound to the going down process
 await new Promise<void>((resolve) => setTimeout(resolve, 1000))
@@ -33,7 +33,7 @@ const handler = async (
 		throw new Error(`Route ("${key}") not registered.`)
 	}
 
-	console.log("*", req.socket.address(), req.method, req.url)
+	console.log("*", `<${req.headers["X-Forwarded-For"] ?? "???.???.???.???"}>`, req.method, req.url)
 
 	if (req.headers["content-type"] !== "application/json") {
 		throw new Error("Invalid content type")
@@ -52,7 +52,7 @@ const handler = async (
 				}
 			})
 			req.on("end", () => {
-				console.log("parsing of size", body.length / 1024, "k")
+				console.log("parsing of size", Math.floor(body.length / 1024), "k")
 				resolve(JSON.parse(body))
 			})
 		} else {
