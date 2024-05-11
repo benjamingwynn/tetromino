@@ -879,6 +879,8 @@
 		grid-template-columns: auto 5em 10em 5em;
 		grid-template-rows: auto 5em;
 		height: 100%;
+		max-width: 100vh;
+		margin: 0 auto;
 
 		h1 {
 			font-size: 4.5em;
@@ -961,6 +963,7 @@
 			grid-template-columns: auto;
 			grid-template-rows: auto 8rem 3rem 10rem;
 			padding-right: 0;
+			max-width: unset;
 
 			.stats {
 				grid-column: auto;
