@@ -5,7 +5,7 @@
 	export let onAction: () => void
 
 	export let delay: number = 200
-	export let interval: number = 16.7 * 4
+	export let interval: number = 16.7 * 2
 	let nextTick: ReturnType<typeof setTimeout> | undefined = undefined
 	let nextDelay: ReturnType<typeof setTimeout> | undefined = undefined
 
