@@ -17,7 +17,7 @@
 	import {noop, sleep} from "util/util"
 
 	/** ignore inputs if the user paused the pause button this long ago (in ms) */
-	const IGNORE_INPUT_AFTER_PAUSE = 1_000
+	const IGNORE_INPUT_AFTER_PAUSE = 500
 
 	let canvas: HTMLCanvasElement
 	let altCanvas: HTMLCanvasElement
