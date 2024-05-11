@@ -16,6 +16,9 @@
 	import {StoredRun} from "server/runs"
 	import {noop, sleep} from "util/util"
 
+	/** ignore inputs if the user paused the pause button this long ago (in ms) */
+	const IGNORE_INPUT_AFTER_PAUSE = 1_000
+
 	let canvas: HTMLCanvasElement
 	let altCanvas: HTMLCanvasElement
 	let previewCanvas: HTMLCanvasElement
@@ -121,10 +124,22 @@
 		nextTouchSpeedUp = setTimeout(touchSpeedUp, 16.7 * 3)
 	}
 
+	let touchControlsDisabled = false
+	let nextFrame: number
+	const frame = () => {
+		if (showTouchControls) {
+			touchControlsDisabled = shouldIgnoreInput()
+		}
+
+		nextFrame = requestAnimationFrame(frame)
+	}
+
 	onMount(() => {
+		nextFrame = requestAnimationFrame(frame)
 		newGame()
 
 		return () => {
+			cancelAnimationFrame(frame)
 			game.destroy()
 			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 		}
@@ -140,11 +155,22 @@
 	let touchControlSwap = !!localStorage.touchControlSwap
 	let lockTouchSubmitScore = true
 	let touchSubmitScoreStage2 = false
+	let timeLastUnpaused: undefined | number
+
 	$: game && (game.muteSounds = gameMute || !!replay || _gameOver)
 	$: game && (game.paused = paused || showTouchSettings || (showLeaderboard && !replay))
 	$: localStorage.mute = gameMute ? 1 : ""
 	$: localStorage.touchControlSwap = touchControlSwap ? 1 : ""
 	$: localStorage.highScore = _highScore
+
+	const shouldIgnoreInput = () => {
+		if (replay) return true
+		if (_gameOver) return true
+		if (paused) return true
+		if (!timeLastUnpaused) return false
+		const okayAfter = timeLastUnpaused + IGNORE_INPUT_AFTER_PAUSE
+		return Date.now() < okayAfter
+	}
 
 	// make sure we don't get stuck in the settings screen
 	$: if (!showTouchControls) showTouchSettings = false
@@ -253,22 +279,25 @@
 		}
 
 		if (ev.key === " " || ev.key === "ArrowUp" || ev.key === "w") {
-			if (replay) return
+			if (shouldIgnoreInput()) return
 			game.playerRotate()
 		} else if (ev.key === "ArrowRight" || ev.key === "d") {
-			if (replay) return
+			if (shouldIgnoreInput()) return
 			game.playerMoveRight()
 		} else if (ev.key === "ArrowLeft" || ev.key === "a") {
-			if (replay) return
+			if (shouldIgnoreInput()) return
 			game.playerMoveLeft()
 		} else if (ev.key === "ArrowDown" || ev.key === "s") {
-			if (replay) return
+			if (shouldIgnoreInput()) return
 			game.playerSpeedUp()
 		} else if (ev.key === "r" || ev.key === "Escape") {
 			// reset
 			newGame()
 		} else if (ev.key === "p") {
 			// pause
+			if (paused) {
+				timeLastUnpaused = Date.now()
+			}
 			paused = !paused
 		} else if (ev.key === "m") {
 			// mute
@@ -299,9 +328,7 @@
 			if (ev.target.tagName !== "INPUT") {
 				ev.preventDefault()
 			}
-			if (_gameOver || replay) {
-				return
-			}
+			if (shouldIgnoreInput()) return
 			showTouchControls = true
 			if (touchControlSwap) {
 				game.playerRotate()
@@ -360,6 +387,9 @@
 						class:active={paused}
 						tabindex="-1"
 						on:click={() => {
+							if (paused) {
+								timeLastUnpaused = Date.now()
+							}
 							paused = !paused //
 						}}>{paused ? "UN <P>AUSE" : "<P>AUSE"}</button
 					>
@@ -431,6 +461,9 @@
 			on:touchend={touchStop}
 			on:touchcancel={touchStop}
 			on:touchstart|preventDefault={() => {
+				if (paused) {
+					timeLastUnpaused = Date.now()
+				}
 				paused = !paused //
 			}}>{paused ? "RESUME" : "PAUSE"}</button
 		>
@@ -505,7 +538,7 @@
 			{/if}
 		</div> -->
 	{/if}
-	<div class="touchControls" hidden={!(showTouchControls && !replay && !replayLoading)}>
+	<div class="touchControls" hidden={!(showTouchControls && !replay && !replayLoading)} class:disabled={touchControlsDisabled}>
 		{#if _gameOver}
 			<button
 				on:contextmenu|preventDefault
@@ -542,9 +575,19 @@
 				}}>{touchSubmitScoreStage2 ? "confirm" : "submit"}</button
 			>
 		{:else}
-			<TouchButton onAction={() => game.playerMoveLeft()}>&lt;</TouchButton>
+			<TouchButton
+				onAction={() => {
+					if (shouldIgnoreInput()) return
+					game.playerMoveLeft()
+				}}>&lt;</TouchButton
+			>
 			{#if touchControlSwap}
-				<TouchButton onAction={() => game.playerSpeedUp()}>drop</TouchButton>
+				<TouchButton
+					onAction={() => {
+						if (shouldIgnoreInput()) return
+						game.playerSpeedUp()
+					}}>drop</TouchButton
+				>
 			{:else}
 				<button
 					class="rotate"
@@ -554,11 +597,17 @@
 					on:touchend={touchStop}
 					on:touchcancel={touchStop}
 					on:touchstart|preventDefault={() => {
+						if (shouldIgnoreInput()) return
 						game.playerRotate()
 					}}>{"spin"}</button
 				>
 			{/if}
-			<TouchButton onAction={() => game.playerMoveRight()}>&gt;</TouchButton>
+			<TouchButton
+				onAction={() => {
+					if (shouldIgnoreInput()) return
+					game.playerMoveRight()
+				}}>&gt;</TouchButton
+			>
 		{/if}
 	</div>
 </div>
@@ -959,6 +1008,10 @@
 		flex-flow: row nowrap;
 		background: rgba(0, 0, 0, 0.6);
 		border-top: solid thin rgba(255, 255, 255, 0.3s);
+
+		&.disabled {
+			opacity: 0.5;
+		}
 
 		&[hidden] {
 			display: none;
