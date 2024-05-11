@@ -128,7 +128,7 @@
 	let nextFrame: number
 	const frame = () => {
 		if (showTouchControls) {
-			touchControlsDisabled = shouldIgnoreInput()
+			touchControlsDisabled = shouldIgnoreInput() && !_gameOver
 		}
 
 		nextFrame = requestAnimationFrame(frame)
