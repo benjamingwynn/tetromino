@@ -542,14 +542,13 @@ export class Game {
 	private enableAsyncAnimations = false
 
 	private step = () => {
+		// get the falling shape, if we have one
 		const tetromino = this.tetromino
-		// const tetromino = this.tetromino
 		if (tetromino) {
-			// see if we're in range of the grid
 			const {type, xOrigin, yOrigin, rot} = tetromino
-			const bitmap = tetrominoes[type][rot]
 
 			const onCollision = () => {
+				const bitmap = tetrominoes[type][rot]
 				// that's a collision, add this to the grid
 				this.lastX = tetromino.xOrigin
 				this.tetromino = undefined
@@ -630,9 +629,12 @@ export class Game {
 				}
 			}
 
+			// see if we're in range of the grid
 			if (this.wouldTetrominoCollide(xOrigin + 0, yOrigin + 1, rot)) {
+				// if we're gonna hit a shape, add this to the grid
 				onCollision()
 			} else {
+				// move down by 1
 				tetromino.yOrigin += 1
 			}
 		}
