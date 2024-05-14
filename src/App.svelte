@@ -235,7 +235,7 @@
 		}
 	}
 
-	const aboutText = `a competitive falling shape game written by Benjamin Gwynn`
+	const aboutText = `a competitive falling shape game written by Benjamin Gwynn [${BUILD.time.toString(16)}]`
 
 	// @ts-expect-error export currently mounted game to window for debugging
 	$: window.game = game
