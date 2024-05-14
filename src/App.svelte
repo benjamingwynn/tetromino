@@ -150,7 +150,13 @@
 	}
 
 	let showLeaderboard = false
-	let paused = false
+	/**
+	 * Hack for firefox not making sounds on arrow key.
+	 * Pause the game when the page loads if we're on Firefox.
+	 *
+	 * See: https://github.com/benjamingwynn/tetromino/issues/1
+	 */
+	let paused = navigator.userAgent.includes("Firefox/")
 	let gameMute = !!localStorage.mute
 	let touchControlSwap = !!localStorage.touchControlSwap
 	let lockTouchSubmitScore = true
