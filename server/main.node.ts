@@ -79,10 +79,9 @@ const handler = async (
 }
 
 const ALLOWED_ORIGINS = [
+	//
 	"http://localhost:1234",
 	"http://workstation.local:1234",
-	"https://tetris.benjamingwynn.com",
-	"http://tetris.benjamingwynn.com",
 	"https://tetromino.app",
 ]
 
