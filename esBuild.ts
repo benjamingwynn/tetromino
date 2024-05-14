@@ -22,7 +22,6 @@ async function cleanup() {
 	await fsp.rm(buildOptions.outdir, {recursive: true, force: true})
 }
 
-/** returns the program as a string */
 async function buildServiceWorkerRegistrar(SERVICE_WORKERS: string[]) {
 	const opts = makeBuildOptions(false, {
 		define: {
