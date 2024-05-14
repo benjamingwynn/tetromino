@@ -13,7 +13,7 @@
 	A game where you try drop tetrominoes in solid rows onto a fixed 10x20 grid, available on mobile and desktop.
 </p>
 
-<h3 align="center"><em>Play now at <a href="https://tetromino.app">tetromino.app</a> in your browser! Free forever, no monetization, no ads.</h3>
+<h3 align="center"><em>Play now at <a href="https://tetromino.app">tetromino.app</a> in your browser! Free forever, no monetization, no ads.</em></h3>
 <p align="center"><a href="https://tetromino.app"><img src="https://api.netlify.com/api/v1/badges/7ba6531e-79ed-42d4-910e-f1f458a9c767/deploy-status" /></a></p>
 
 ### Features
