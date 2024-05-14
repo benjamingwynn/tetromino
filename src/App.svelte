@@ -308,7 +308,12 @@
 		} else if (ev.key === "F2") {
 			altCanvas.hidden = !altCanvas.hidden
 		} else if (ev.key === "l") {
-			showLeaderboard = !showLeaderboard
+			if (showLeaderboard) {
+				showLeaderboard = false
+				timeLastUnpaused = Date.now()
+			} else {
+				showLeaderboard = true
+			}
 		} else {
 			console.warn("unregistered key:", ev.key)
 		}
