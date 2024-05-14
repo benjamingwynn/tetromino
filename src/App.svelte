@@ -1116,8 +1116,8 @@
 	}
 
 	.touchFloat button.action {
-		height: 6rem;
-		width: 6rem;
+		height: 5.5rem;
+		width: 5.5rem;
 		border-color: #444;
 	}
 
