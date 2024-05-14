@@ -15,3 +15,6 @@ declare module "*.gif"
 
 /** Whether running on a local development server. Use `if (DEV)` to escape emitting code in the production build. */
 declare const DEV: boolean
+
+/** Misc build parameters accessible from the source code. */
+declare const BUILD: {time: number}

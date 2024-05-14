@@ -5,7 +5,7 @@ import sveltePreprocess from "svelte-preprocess"
 import htmlPlugin from "@chialab/esbuild-plugin-html"
 import type {BuildOptions} from "esbuild"
 
-export const makeBuildOptions = (dev: boolean): BuildOptions & {outdir: string} => {
+export const makeBuildOptions = (dev: boolean, extra?: {define: BuildOptions["define"]}): BuildOptions & {outdir: string} => {
 	return {
 		entryPoints: ["./src/index.html"],
 		minify: !dev,
@@ -16,6 +16,8 @@ export const makeBuildOptions = (dev: boolean): BuildOptions & {outdir: string} 
 		},
 		outdir: dev ? ".esdev" : "dist",
 		assetNames: "assets/[name]-[hash]",
+		platform: "browser",
+		entryNames: "index",
 		chunkNames: "[ext]/[name]-[hash]",
 		bundle: true,
 		loader: {
@@ -42,6 +44,10 @@ export const makeBuildOptions = (dev: boolean): BuildOptions & {outdir: string} 
 				},
 			}),
 		],
-		define: {DEV: String(dev)},
+		define: {
+			DEV: String(dev),
+			BUILD: JSON.stringify({time: Date.now()}),
+			...extra?.define,
+		},
 	}
 }

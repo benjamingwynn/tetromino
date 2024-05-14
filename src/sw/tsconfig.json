@@ -1,14 +1,10 @@
 {
 	"compilerOptions": {
+		"lib": ["WebWorker", "ESNext"],
 		"composite": true,
 		"target": "ESNext",
 		"module": "NodeNext",
-		"paths": {
-			"server/*": ["./server/*"],
-			"util/*": ["./util/*"],
-			"src/*": ["./src/*"],
-			"client/*": ["./src/client/*"]
-		},
+		"paths": {},
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
@@ -19,7 +15,6 @@
 		"resolveJsonModule": true,
 		"noEmit": true
 	},
-	"include": ["src", "./*.ts", "util/", "server/", "esTypes.d.ts"],
-	"exclude": ["src/sw"],
+	"include": ["."],
 	"references": []
 }

@@ -5,6 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"start": "bests --watch ./esDev.ts",
+		"sim:prod": "pnpm run build && http-server -c-1 dist",
 		"build": "bests ./esBuild.ts",
 		"deploy": "pnpm version patch && git push && git push --tags && ./serverLocalDeploy.sh",
 		"server": "bests --watch ./server/main.node.ts"
