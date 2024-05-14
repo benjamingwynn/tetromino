@@ -235,7 +235,8 @@
 		}
 	}
 
-	const aboutText = `a competitive falling shape game written by Benjamin Gwynn [${BUILD.time.toString(16)}]`
+	const aboutText = `a competitive falling shape game written by Benjamin Gwynn`
+	const fullVerString = `v${version} [${BUILD.time.toString(16)}]`
 
 	// @ts-expect-error export currently mounted game to window for debugging
 	$: window.game = game
@@ -446,8 +447,8 @@
 							.padStart(2, "0")} min {(sec % 60).toString().padStart(2, "0")} sec
 					</h3>
 				{:else}
-					<h4>Benjamin's Tetromino Game v{version}</h4>
-					<h5>{aboutText}</h5>
+					<h2>tetromino.app</h2>
+					<h5>{fullVerString}</h5>
 					{#if !showTouchControls}
 						<h5>Move with A/D or left/right arrows, down/S to speed up, up/W/space to spin.</h5>
 					{/if}
@@ -669,6 +670,7 @@
 			<span class="go">&gt;</span>
 		</a>
 	</fieldset>
+	<fieldset>{fullVerString}</fieldset>
 </div>
 
 {#if showTouchControls}
