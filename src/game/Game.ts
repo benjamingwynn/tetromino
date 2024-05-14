@@ -498,6 +498,18 @@ export class Game {
 
 	private lastStep = 0
 	private minStepInterval = 6
+	/**
+	 * when the player hits this score, switch to the `endgameStepInterval`
+	 * a good player will usually hit 10k in 10min, so this should make the game
+	 * significantly harder after 20 min
+	 */
+	private endgameStartsAt = 20_000
+	private endgameStepInterval = 3
+
+	/** after this score, try to kill the player */
+	private killScreenStartsAt = 100_000
+	private killScreenStepInterval = 1
+
 	private startStepInterval = 50
 	private stepInterval = this.startStepInterval
 	private giveTetrominoInterval = 13
@@ -506,8 +518,8 @@ export class Game {
 	 * how the score decreases the score
 	 * effectively determines the length of the game until hitting the `minStepInterval`
 	 *
-	 * 125 = 10-15 min
-	 * 250 = ~30 min?
+	 * 125 = ~10 min
+	 * 250 = ~20 min
 	 */
 	private easiness = 250
 	public paused = false
@@ -760,8 +772,14 @@ export class Game {
 
 			// **speed up the game**
 			if (this.giveCount % 5 === 0) {
-				this.stepInterval = Math.floor(this.startStepInterval - this.score / this.easiness)
-				this.stepInterval = Math.max(this.minStepInterval, this.stepInterval)
+				if (this.score >= this.killScreenStartsAt) {
+					this.stepInterval = this.killScreenStepInterval
+				} else if (this.score >= this.endgameStartsAt) {
+					this.stepInterval = this.endgameStepInterval
+				} else {
+					const s = Math.floor(this.startStepInterval - this.score / this.easiness)
+					this.stepInterval = Math.max(this.minStepInterval, s)
+				}
 			}
 		}
 		if (this.tickCounter >= this.lastStep + this.stepInterval) {
