@@ -54,7 +54,7 @@ Whether playing the game on an iPhone with your fingers or playing the game on a
 
 #### Other features
 
-- Play/pause button, .
+- Play/pause button.
 - Animations whenever you score points or lose the game.
 - Support for high refresh rate monitors.
 - Renders at low resolution to increase performance/battery life.
