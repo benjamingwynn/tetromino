@@ -50,6 +50,8 @@ I chose to use a Raspberry Pi as I'm not expecting a very high load on the serve
 
 However, it's worth noting that there are other solutions available. One could easily adapt this code to run on a serverless infrastructure, which would be far more scalable or host on a service like EC2. This is why the entrypoint is `main.node.ts` - you could have a `main.serverless.ts` for a serverless entrypoint, or `main.deno.ts`/`main.bun.ts` to test with Deno or Bun.
 
+It's also generally advisable to use a framework like Express, Koa or Hapi instead of writing code against the HTTP module directly, I've decided to take a more manual approach as a learning exercise. If you wanted to use express for example, create a `main.express.ts` file and add the routes from `api.ts`.
+
 Under normal circumstances I would package the leaderboard server up into a Docker image, however because I'm currently using an M1 Mac for development and [pushing images to SSH remotes on macos is busted](https://github.com/docker/for-mac/issues/6869), I've gone for the simpler approach of just deploying straight to bare metal. `systemd` services are used to control the ngrok proxy and the server services.
 
 #### Running the leaderboard server locally
@@ -65,3 +67,9 @@ Requests are only allowed to the leaderboard server from the allowed origins lis
 #### No server database?
 
 datastore.ts is currently taking the place of a real database - which just stores data as JSON on the disk under the `.data` directory. This is to keep the project small and the data easily portable, if the project gets more traction this will have to be changed to handle the amount of data. Either SQL or NoSQL would fit this project well.
+
+### Contributing
+
+Contributions are welcome, especially bug fixes!
+
+This project uses Prettier to automatically format files, please make sure you use Prettier against your code before submitting a pull request.
