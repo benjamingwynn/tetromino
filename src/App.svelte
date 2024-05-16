@@ -453,7 +453,7 @@
 							.padStart(2, "0")} min {(sec % 60).toString().padStart(2, "0")} sec
 					</h3>
 				{:else}
-					<h2>tetromino.app</h2>
+					<h2>{DEV ? "DEVELOPMENT BUILD" : "tetromino.app"}</h2>
 					<h5>{fullVerString}</h5>
 					{#if !showTouchControls}
 						<h5>Move with A/D or left/right arrows, down/S to speed up, up/W/space to spin.</h5>
