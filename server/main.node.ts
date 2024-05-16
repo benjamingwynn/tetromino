@@ -10,6 +10,34 @@ const MAX_LENGTH = 1024 * 1024 // max 1024K payload
 // HACK: wait arbitrary amount of time, if node.js ran with `--watch` since the last port still may be bound to the going down process
 await new Promise<void>((resolve) => setTimeout(resolve, 1000))
 
+/** returns a log-printable IP address of the res/req. */
+function getIP(
+	res: http.ServerResponse<http.IncomingMessage> & {
+		req: http.IncomingMessage
+	}
+) {
+	const req = res.req
+
+	const fwd = req.headers["x-forwarded-for"]
+	if (fwd) {
+		if (fwd.includes(":")) {
+			return "[IPv6] " + fwd
+		} else {
+			return fwd
+		}
+	}
+
+	const addr = req.socket.address()
+	if (addr && "address" in addr) {
+		if (addr.family !== "IPv4") {
+			return "[" + addr.family + "] " + addr.address
+		}
+		return addr.address
+	}
+
+	return "???.???.???.???"
+}
+
 const handler = async (
 	res: http.ServerResponse<http.IncomingMessage> & {
 		req: http.IncomingMessage
@@ -33,7 +61,7 @@ const handler = async (
 		throw new Error(`Route ("${key}") not registered.`)
 	}
 
-	console.log("*", new Date().toISOString(), `<${req.headers["x-forwarded-for"] ?? "???.???.???.???"}>`, req.method, req.url)
+	console.log("*", new Date().toISOString(), getIP(res))
 
 	if (req.headers["content-type"] !== "application/json") {
 		throw new Error("Invalid content type")
