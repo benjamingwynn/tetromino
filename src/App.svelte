@@ -281,7 +281,12 @@
 		}
 
 		// ignore keyboard presses if we're focused on an input
-		if (document.activeElement?.tagName === "INPUT" && ev.key !== "Escape") {
+		if (document.activeElement?.tagName === "INPUT") {
+			// ...unless it's escape, then start a new game
+			if (ev.key === "Escape") {
+				newGame()
+			}
+
 			return
 		}
 
@@ -297,7 +302,7 @@
 		} else if (ev.key === "ArrowDown" || ev.key === "s") {
 			if (shouldIgnoreInput()) return
 			game.playerSpeedUp()
-		} else if (ev.key === "r" || ev.key === "Escape") {
+		} else if (ev.key === "r") {
 			// reset
 			newGame()
 		} else if (ev.key === "p") {
