@@ -1,6 +1,8 @@
 ### Quick start
 
-To install dependencies we use pnpm, run `pnpm i` to prepare the repo after cloning from git.
+To install dependencies we use pnpm, if you don't have pnpm you can install it with `npm i --global pnpm`.
+
+Run `pnpm i` to prepare the repo after cloning from git.
 
 When ready, run `pnpm start` to start the dev server.
 The game will be available on http://localhost:1234
@@ -35,7 +37,7 @@ Service workers are only built for production builds of the game. For the servic
 
 - Build our main program (from `src/index.html`)
 - Build our service workers (from `src/sw/*.ts`) with reference to the built files from the main program
-- Build our service worker registrar (from `esServiceRegistrar.ts`) with reference to our build service workers
+- Build our service worker registrar (from `esServiceRegistrar.ts`) with reference to our built service workers
 - Add a script for the built JS of the service worker registrar into the output HTML file
 
 Both the registrar and service worker programs are designed to make sure offline functionality is available, without keeping any out-of-date assets cached. Refer to their source code for more information.
@@ -48,7 +50,7 @@ The leaderboard server is ran directly via [B.ES.TS](https://github.com/benjamin
 
 I chose to use a Raspberry Pi as I'm not expecting a very high load on the server, and it's very affordable compared to cloud solutions since I already own the hardware.
 
-However, it's worth noting that there are other solutions available. One could easily adapt this code to run on a serverless infrastructure, which would be far more scalable or host on a service like EC2. This is why the entrypoint is `main.node.ts` - you could have a `main.serverless.ts` for a serverless entrypoint, or `main.deno.ts`/`main.bun.ts` to test with Deno or Bun.
+However, it's worth noting that there are other solutions available. One could easily adapt this code to run on a serverless infrastructure, which would be far more scalable, or host on a service like EC2. This is why the entrypoint is `main.node.ts` - you could have a `main.serverless.ts` for a serverless entrypoint, or `main.deno.ts`/`main.bun.ts` to test with Deno or Bun.
 
 It's also generally advisable to use a framework like Express, Koa or Hapi instead of writing code against the HTTP module directly, I've decided to take a more manual approach as a learning exercise. If you wanted to use express for example, create a `main.express.ts` file and add the routes from `api.ts`.
 
@@ -62,7 +64,7 @@ The leaderboard server will be hosted on port `8000`.
 
 If you are running the game on localhost using `pnpm start` then it will automatically try to connect to your local leaderboard server.
 
-Requests are only allowed to the leaderboard server from the allowed origins list, please check and modify the `ALLOWED_ORIGINS` from `main.node.ts` appropriately for your frontend dev server.
+Requests are only allowed to the leaderboard server from the allowed origins list, please check and modify the `ALLOWED_ORIGINS` from `origins.ts` appropriately for your frontend dev server.
 
 #### No server database?
 
