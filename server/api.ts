@@ -4,7 +4,7 @@ import packageJSON from "../package.json" assert {type: "json"}
 import type {GameLog} from "src/game/Game.ts"
 import {replay} from "./simulator.ts"
 import {errors} from "util/errors.ts"
-import {Scoreboard, addToScoreboard, calculateScoreboardPosition, getScoreboard} from "./scoreboard.ts"
+import {Scoreboard, addDeathGrid, addToScoreboard, calculateScoreboardPosition, getScoreboard} from "./scoreboard.ts"
 import {assertRunID, assertValid} from "./validate.ts"
 import {addToRuns, getRunAtIndex} from "./runs.ts"
 import {censorUsername} from "./censor.ts"
@@ -42,8 +42,8 @@ async function get(id: number) {
 async function validate(this: void, clientVersion: string, submission: Submission): Promise<number | false> {
 	assertValid({clientVersion, submission}, ["clientVersion", "submission"])
 
-	const success = replay(submission.seed, submission.score, submission.ticks, submission.log)
-	if (!success) {
+	const {ok} = replay(submission.seed, submission.score, submission.ticks, submission.log)
+	if (!ok) {
 		throw errors.SCORE_MISMATCH
 	}
 
@@ -60,8 +60,9 @@ async function submit(this: void, clientVersion: string, submission: Submission,
 	assertValid({clientVersion, submission, username}, ["clientVersion", "submission", "username"])
 
 	// re-check this to make sure someone didn't skip the validate step
-	if (!(await validate(version, submission))) {
-		throw errors.SUBMISSION_DROPPED
+	const {ok, game} = replay(submission.seed, submission.score, submission.ticks, submission.log)
+	if (!ok) {
+		throw errors.SCORE_MISMATCH
 	}
 
 	// great, this is a valid run!
@@ -78,6 +79,9 @@ async function submit(this: void, clientVersion: string, submission: Submission,
 
 	// add the high score
 	await addToScoreboard(submission.score, id)
+
+	// add to deathGrids
+	await addDeathGrid(id, game.grid)
 }
 
 export const api = {

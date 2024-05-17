@@ -49,7 +49,12 @@ export async function getScoreboard(page = 0) {
 	}
 
 	return rtn
-	//
+}
+
+export async function addDeathGrid(id: number, grid: number[][]) {
+	const deathGrids = await datastore("deathGrids", initDeathGrid)
+	deathGrids[id] = grid
+	await deathGrids.flush()
 }
 
 export type Scoreboard = Awaited<ReturnType<typeof getScoreboard>>

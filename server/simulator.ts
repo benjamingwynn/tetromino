@@ -32,7 +32,7 @@ export function replay(seed: number, score: number, max: number, log: GameLog) {
 	const ok = simulate(game, score, max, log)
 
 	game.destroy()
-	return ok
+	return {ok, game}
 }
 
 /** returns null if failed */
