@@ -49,7 +49,7 @@
 	let touchControlsDisabled = false
 	let nextFrame: number
 
-	let confirmStuff: {body: string; callback: (confirm: boolean) => void} | undefined = undefined
+	let confirmations: {body: string; callback: (confirm: boolean) => void} | undefined = undefined
 	let replay: StoredRun | undefined = undefined
 	let replayLoading = false
 	let replayError: string | undefined = undefined
@@ -152,11 +152,11 @@
 	const playbackGame = async (result: ScoreboardResult) => {
 		const shouldContinue = await new Promise((resolve) => {
 			const callback = (b: boolean) => {
-				confirmStuff = undefined
+				confirmations = undefined
 				console.warn(">>>>>>>CALLBACK>>>>>>>>", b)
 				resolve(b)
 			}
-			confirmStuff = {body: "Playing back a game will cause your current game to end!\n\nPlay/pause/speed control are not available yet.", callback}
+			confirmations = {body: "Playing back a game will cause your current game to end!\n\nPlay/pause/speed control are not available yet.", callback}
 		})
 		if (!shouldContinue) {
 			console.log("user bailed from replaying game")
@@ -237,8 +237,8 @@
 	<h1>loading playback, please wait</h1>
 {/if}
 
-{#if confirmStuff}
-	<Confirm body={confirmStuff.body} callback={confirmStuff.callback} />
+{#if confirmations}
+	<Confirm body={confirmations.body} callback={confirmations.callback} />
 {/if}
 
 <svelte:window

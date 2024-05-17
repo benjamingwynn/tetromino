@@ -3,6 +3,7 @@
 import http from "node:http"
 import {api} from "./api.ts"
 import {errors} from "util/errors.ts"
+import {ALLOWED_ORIGINS} from "./origins.ts"
 
 const keys = Object.keys(api)
 const MAX_LENGTH = 1024 * 1024 // max 1024K payload
@@ -105,13 +106,6 @@ const handler = async (
 		}
 	}
 }
-
-const ALLOWED_ORIGINS = [
-	//
-	"http://localhost:1234",
-	"http://workstation.local:1234",
-	"https://tetromino.app",
-]
 
 const RESPONSE_HEADERS = {"Content-Type": "application/json"}
 
