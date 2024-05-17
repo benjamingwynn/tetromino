@@ -8,16 +8,18 @@
 	import {Game} from "./game/Game"
 	import {version} from "../package.json"
 	import "./font/RedAlert.css"
-	import AnimatedText from "./components/AnimatedText.svelte"
 	import Leaderboard from "./components/Leaderboard.svelte"
 	import Confirm from "./components/Confirm.svelte"
 	import {ScoreboardResult} from "server/scoreboard"
 	import api from "./client/api"
 	import {StoredRun} from "server/runs"
-	import {noop, sleep} from "util/util"
+	import {noop} from "util/util"
 
 	/** ignore inputs if the user paused the pause button this long ago (in ms) */
-	const IGNORE_INPUT_AFTER_PAUSE = 500
+	const ignoreInputAfterPause = 500
+
+	const aboutText = `a competitive falling shape game written by Benjamin Gwynn`
+	const fullVerString = `v${version} [${BUILD.time.toString(16)}]`
 
 	let canvas: HTMLCanvasElement
 	let altCanvas: HTMLCanvasElement
@@ -29,6 +31,40 @@
 	let showTouchControls = !!navigator.maxTouchPoints
 	let lockTouchRetry = false
 	let showTouchSettings = false
+	let showLeaderboard = false
+	/**
+	 * Hack for firefox not making sounds on arrow key.
+	 * Pause the game when the page loads if we're on Firefox.
+	 *
+	 * See: https://github.com/benjamingwynn/tetromino/issues/1
+	 */
+	let paused = navigator.userAgent.includes("Firefox/")
+	let gameMute = !!localStorage.mute
+	let touchControlSwap = !!localStorage.touchControlSwap
+	let lockTouchSubmitScore = true
+	let touchSubmitScoreStage2 = false
+	let timeLastUnpaused: undefined | number
+
+	let nextTouchSpeedUp: ReturnType<typeof setTimeout> | undefined = undefined
+	let touchControlsDisabled = false
+	let nextFrame: number
+
+	let confirmStuff: {body: string; callback: (confirm: boolean) => void} | undefined = undefined
+	let replay: StoredRun | undefined = undefined
+	let replayLoading = false
+	let replayError: string | undefined = undefined
+
+	// @ts-expect-error export currently mounted game to window for debugging
+	$: window.game = game
+
+	// make sure we don't get stuck in the settings screen
+	$: if (!showTouchControls) showTouchSettings = false
+
+	$: game && (game.muteSounds = gameMute || !!replay || _gameOver)
+	$: game && (game.paused = paused || showTouchSettings || (showLeaderboard && !replay))
+	$: localStorage.mute = gameMute ? 1 : ""
+	$: localStorage.touchControlSwap = touchControlSwap ? 1 : ""
+	$: localStorage.highScore = _highScore
 
 	const newGame = () => {
 		// altCanvas.hidden = true
@@ -86,15 +122,12 @@
 		})
 	}
 
-	let nextTouchSpeedUp: ReturnType<typeof setTimeout> | undefined = undefined
 	const touchSpeedUp = () => {
 		game.playerSpeedUp()
 		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 		nextTouchSpeedUp = setTimeout(touchSpeedUp, 16.7 * 3)
 	}
 
-	let touchControlsDisabled = false
-	let nextFrame: number
 	const frame = () => {
 		if (showTouchControls) {
 			touchControlsDisabled = shouldIgnoreInput() && !_gameOver
@@ -103,58 +136,18 @@
 		nextFrame = requestAnimationFrame(frame)
 	}
 
-	onMount(() => {
-		nextFrame = requestAnimationFrame(frame)
-		newGame()
-
-		return () => {
-			cancelAnimationFrame(frame)
-			game.destroy()
-			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
-		}
-	})
-
 	const touchStop = () => {
 		if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
 	}
-
-	let showLeaderboard = false
-	/**
-	 * Hack for firefox not making sounds on arrow key.
-	 * Pause the game when the page loads if we're on Firefox.
-	 *
-	 * See: https://github.com/benjamingwynn/tetromino/issues/1
-	 */
-	let paused = navigator.userAgent.includes("Firefox/")
-	let gameMute = !!localStorage.mute
-	let touchControlSwap = !!localStorage.touchControlSwap
-	let lockTouchSubmitScore = true
-	let touchSubmitScoreStage2 = false
-	let timeLastUnpaused: undefined | number
-
-	$: game && (game.muteSounds = gameMute || !!replay || _gameOver)
-	$: game && (game.paused = paused || showTouchSettings || (showLeaderboard && !replay))
-	$: localStorage.mute = gameMute ? 1 : ""
-	$: localStorage.touchControlSwap = touchControlSwap ? 1 : ""
-	$: localStorage.highScore = _highScore
 
 	const shouldIgnoreInput = () => {
 		if (replay) return true
 		if (_gameOver) return true
 		if (paused) return true
 		if (!timeLastUnpaused) return false
-		const okayAfter = timeLastUnpaused + IGNORE_INPUT_AFTER_PAUSE
+		const okayAfter = timeLastUnpaused + ignoreInputAfterPause
 		return Date.now() < okayAfter
 	}
-
-	// make sure we don't get stuck in the settings screen
-	$: if (!showTouchControls) showTouchSettings = false
-
-	let confirmStuff: {body: string; callback: (confirm: boolean) => void} | undefined = undefined
-	// let playback: {error?: string; inProgress?: Promise<void>} | false = false
-	let replay: StoredRun | undefined = undefined
-	let replayLoading = false
-	let replayError: string | undefined = undefined
 
 	const playbackGame = async (result: ScoreboardResult) => {
 		const shouldContinue = await new Promise((resolve) => {
@@ -210,11 +203,16 @@
 		}
 	}
 
-	const aboutText = `a competitive falling shape game written by Benjamin Gwynn`
-	const fullVerString = `v${version} [${BUILD.time.toString(16)}]`
+	onMount(() => {
+		nextFrame = requestAnimationFrame(frame)
+		newGame()
 
-	// @ts-expect-error export currently mounted game to window for debugging
-	$: window.game = game
+		return () => {
+			cancelAnimationFrame(nextFrame)
+			game.destroy()
+			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
+		}
+	})
 </script>
 
 {#if replayError}
@@ -510,20 +508,6 @@
 		>
 	</div>
 
-	{#if _gameOver}
-		<!-- <div class="youDied">
-			<h1>GAME OVER</h1>
-			{#if !showTouchControls}
-				<button
-					type="button"
-					on:click={() => {
-						newGame()
-						// altCanvas.hidden = true
-					}}>(R)eset and start new game</button
-				>
-			{/if}
-		</div> -->
-	{/if}
 	<div class="touchControls" hidden={!(showTouchControls && !replay && !replayLoading)} class:disabled={touchControlsDisabled}>
 		{#if _gameOver}
 			<button
@@ -557,7 +541,6 @@
 					} else {
 						touchSubmitScoreStage2 = true
 					}
-					// newGame()
 				}}>{touchSubmitScoreStage2 ? "confirm" : "submit"}</button
 			>
 		{:else}
