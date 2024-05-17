@@ -4,7 +4,6 @@ import {noop, sleep} from "util/util.ts"
 import RandomNumberGenerator from "mersenne-twister"
 import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./tetrominoes.ts"
 import {setInterval, clearInterval} from "./frameSetInterval.ts"
-import {palettes} from "./palettes.ts"
 // import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./debug_tetrominoes.ts"
 
 const hslCache = new WeakMap<number[], string>()
@@ -26,7 +25,6 @@ type Tetromino = {
 	yOrigin: number
 	/** rotation/alternate shape number */
 	rot: number
-	palette: number
 }
 
 /**
@@ -55,7 +53,7 @@ export class Game {
 	 * The grid of placed items.
 	 * **ATTENTION: this is stored bottom-to-top, this may be the opposite of what you're expecting!**
 	 */
-	public grid: [number, number][][] = [
+	public grid: number[][] = [
 		// [1, 4, 1, 1, 1, 1, 1, 1, 7, 3],
 		// [3, 2, 3, 4, 5, 6, 7, 1, 5, 1],
 		// [4, 6, 1, 1, 2, 1, 1, 4, 1, 6],
@@ -67,7 +65,17 @@ export class Game {
 	]
 	private size!: number
 
-	private colors = palettes
+	/** array of [h,s,l] */
+	private colors = [
+		[0, 0, 90], // (dead)
+		[180, 90, 60], // I
+		[60, 90, 60], // O
+		[300, 90, 60], // T
+		[240, 90, 60], // J
+		[30, 90, 60], // L
+		[120, 90, 60], // S
+		[255, 90, 60], // Z
+	]
 
 	/**
 	 * [
@@ -93,7 +101,6 @@ export class Game {
 	public onUpdate: (data: {score: number; gameOver: boolean}) => void = noop
 
 	private randomGenerator: RandomNumberGenerator
-	private palette: number = 0
 
 	constructor({
 		canvas,
@@ -328,7 +335,6 @@ export class Game {
 		this.scoreAnimationPromise = undefined
 		this.loseAnimationPromise = undefined
 		this.nextTetrominoType = this.getNextTetrominoType()
-		this.palette = 0
 		// reset playback if applicable
 		if (this.playbackInProgress) {
 			this.playbackInProgress.startTime = Date.now()
@@ -462,8 +468,8 @@ export class Game {
 		this.size = Math.min(this.canvas.width, this.canvas.height) / this.columns
 	}
 
-	private drawCell(x: number, y: number, palette: number, colorIndex: number) {
-		let [h, s, l] = palettes[palette][colorIndex]
+	private drawCell(x: number, y: number, colorIndex: number) {
+		let [h, s, l] = this.colors[colorIndex]
 		if (this.animateRow && this.animateRow[0] === y) {
 			//
 			// draw an animating cell
@@ -572,7 +578,7 @@ export class Game {
 							const placeY = this.rows - (yOrigin + bY) - 1
 							if (!this.grid[placeY]) this.grid[placeY] = []
 							const color = tetrominoIndices[type] + 1
-							this.grid[placeY][placeX] = [this.palette, color]
+							this.grid[placeY][placeX] = color
 						}
 					}
 				}
@@ -651,36 +657,35 @@ export class Game {
 	/** returns 1 for collide with grid, 2 for collide with floor */
 	private wouldTetrominoCollide = (x: number, y: number, rot: number) => {
 		const tetromino = this.tetromino
-		if (!tetromino) {
-			return
-		}
-		// see if we're in range of the grid
-		const {type} = tetromino
-		const bitmap = tetrominoes[type][rot]
+		if (tetromino) {
+			// see if we're in range of the grid
+			const {type} = tetromino
+			const bitmap = tetrominoes[type][rot]
 
-		for (let i = 0; i < bitmap.length; i++) {
-			const row = bitmap[i]
-			for (let j = 0; j < row.length; j++) {
-				if (row[j]) {
-					// ^ if shape filled
-					const partX = j + x
-					const partY = i + y
+			for (let i = 0; i < bitmap.length; i++) {
+				const row = bitmap[i]
+				for (let j = 0; j < row.length; j++) {
+					if (row[j]) {
+						// ^ if shape filled
+						const partX = j + x
+						const partY = i + y
 
-					if (this.drawDebug) this.debugBoxes.push({stroke: "red", x: partX, y: partY})
-					if (partY === this.rows) {
-						if (this.drawDebug) this.debugBoxes.push({stroke: "limegreen", x: partX, y: partY - 1})
-						return 2
-					}
-					for (let i2 = 0; i2 < this.grid.length; i2++) {
-						const row = this.grid[i2]
-						if (row) {
-							const gridY = this.rows - i2 - 1
-							for (let gridX = 0; gridX < row.length; gridX++) {
-								const gridFill = row[gridX]
-								if (gridFill) {
-									if (partX === gridX && partY === gridY) {
-										if (this.drawDebug) this.debugBoxes.push({stroke: "limegreen", x: partX, y: partY})
-										return 1
+						if (this.drawDebug) this.debugBoxes.push({stroke: "red", x: partX, y: partY})
+						if (partY === this.rows) {
+							if (this.drawDebug) this.debugBoxes.push({stroke: "limegreen", x: partX, y: partY - 1})
+							return 2
+						}
+						for (let i2 = 0; i2 < this.grid.length; i2++) {
+							const row = this.grid[i2]
+							if (row) {
+								const gridY = this.rows - i2 - 1
+								for (let gridX = 0; gridX < row.length; gridX++) {
+									const gridFill = row[gridX]
+									if (gridFill) {
+										if (partX === gridX && partY === gridY) {
+											if (this.drawDebug) this.debugBoxes.push({stroke: "limegreen", x: partX, y: partY})
+											return 1
+										}
 									}
 								}
 							}
@@ -727,10 +732,37 @@ export class Game {
 
 		// give tetromino if we don't have one
 		if (!this.tetromino && this.tickCounter >= this.tickLostTetromino + this.giveTetrominoInterval) {
+			// const shape = "O"
 			const shape = this.nextTetrominoType
 			this.nextTetrominoType = this.getNextTetrominoType()
 
-			const tetromino: Tetromino = {type: shape, xOrigin: this.lastX, yOrigin: -tetrominoes[shape][0].length - 0, rot: 0, palette: this.palette}
+			// draw the preview for the next shape
+			if (this.previewCtx && this.previewCanvas) {
+				this.previewCanvas.width = this.previewCanvas.width
+
+				const [type, , , rot] = [this.nextTetrominoType, 0, 0, 0]
+				const color = tetrominoIndices[type] + 1
+				const bitmap = tetrominoes[type][rot]
+				for (let i = 0; i < bitmap.length; i++) {
+					const row = bitmap[i]
+					for (let j = 0; j < row.length; j++) {
+						const filled = row[j]
+						if (filled) {
+							let [h, s, l] = this.colors[color]
+							this.previewCtx.fillStyle = hsl([h, s, l])
+
+							const size = this.size
+							this.previewCtx.fillRect(j * size, i * size, size, size)
+
+							this.previewCtx.strokeStyle = hsl([h, s + 20, l - 20])
+							this.previewCtx.lineWidth = 1
+							this.previewCtx.strokeRect((j + 0) * size + 2, i * size + 2, size - 4, size - 4)
+						}
+					}
+				}
+			}
+
+			const tetromino: Tetromino = {type: shape, xOrigin: this.lastX, yOrigin: -tetrominoes[shape][0].length - 0, rot: 0}
 
 			// the spawned tetromino can technically be outside the right of the game, fix that
 			const maxX = this.getTetrominoXMax(tetromino)
@@ -748,35 +780,6 @@ export class Game {
 					const s = Math.floor(this.startStepInterval - this.score / this.easiness)
 					this.stepInterval = Math.max(this.minStepInterval, s)
 				}
-
-				this.palette = Math.floor(this.score / this.paletteChangeScore) % (this.colors.length + 0)
-			}
-
-			// draw the preview for the next shape
-			if (this.previewCtx && this.previewCanvas) {
-				this.previewCanvas.width = this.previewCanvas.width
-
-				const type = this.nextTetrominoType
-				const rot = 0
-				const color = tetrominoIndices[type] + 1
-				const bitmap = tetrominoes[type][rot]
-				for (let i = 0; i < bitmap.length; i++) {
-					const row = bitmap[i]
-					for (let j = 0; j < row.length; j++) {
-						const filled = row[j]
-						if (filled) {
-							let [h, s, l] = palettes[this.palette][color]
-							this.previewCtx.fillStyle = hsl([h, s, l])
-
-							const size = this.size
-							this.previewCtx.fillRect(j * size, i * size, size, size)
-
-							this.previewCtx.strokeStyle = hsl([h, s + 20, l - 20])
-							this.previewCtx.lineWidth = 1
-							this.previewCtx.strokeRect((j + 0) * size + 2, i * size + 2, size - 4, size - 4)
-						}
-					}
-				}
 			}
 		}
 		if (this.tickCounter >= this.lastStep + this.stepInterval) {
@@ -784,9 +787,6 @@ export class Game {
 			this.lastStep = this.tickCounter
 		}
 	}
-
-	/** every time the score changes by this much, use the next palette */
-	private paletteChangeScore = 2000
 
 	/** renders a single frame */
 	public renderFrame = () => {
@@ -804,9 +804,8 @@ export class Game {
 					const col = row[j]
 					const x = j
 
-					if (col) {
-						const [p, c] = col
-						this.drawCell(x, y, p, c)
+					if (col !== undefined && col !== null) {
+						this.drawCell(x, y, col)
 					}
 				}
 			}
@@ -829,7 +828,6 @@ export class Game {
 			// hack in the _totalSkippedFrameIntervals so we can see it on mobile, we reset this to 0 when starting ticks on a game
 			" Skipped: " + window._totalSkippedFrameIntervals,
 			"Drawn: " + Date.now(),
-			"Palette: " + this.palette,
 			this.animateRow?.join(",") ?? "-",
 		]
 		if (tetromino) {
@@ -842,7 +840,7 @@ export class Game {
 				for (let j = 0; j < row.length; j++) {
 					const filled = row[j]
 					if (filled) {
-						this.drawCell(xOrigin + j, yOrigin + i, this.palette, color)
+						this.drawCell(xOrigin + j, yOrigin + i, color)
 					}
 				}
 			}
@@ -938,7 +936,7 @@ export class Game {
 							for (let j = n - 1; j >= 0; j--) {
 								// const col = row[i]
 								if (row[j]) {
-									row[j] = [row[j][0], 0]
+									row[j] = 0
 									await sleep(timePerX)
 									if (!this.loseAnimationPromise) return
 									// delete row[j]

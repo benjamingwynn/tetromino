@@ -4,7 +4,7 @@
 	import {onMount} from "svelte"
 
 	let canvas: HTMLCanvasElement
-	export let grid: [number, number][][]
+	export let grid: number[][]
 
 	onMount(() => {
 		if (!canvas) throw new Error("fuck")
