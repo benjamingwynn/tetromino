@@ -40,6 +40,7 @@ export function isValidSubmission(obj: any): obj is Submission {
 	return rtn
 }
 
+/** @throws string when unsuccessful */
 export function assertValid(
 	data: Partial<{clientVersion: string; submission: Submission; username: string}>,
 	required: ("clientVersion" | "submission" | "username")[] = []
@@ -69,4 +70,14 @@ export function assertValid(
 	} else if (required.includes("submission")) {
 		throw errors.MISSING_DATA
 	}
+}
+
+/** @throws string when unsuccessful */
+export function assertRunID(data?: any) {
+	if (typeof data === "number" && data > Number.MIN_SAFE_INTEGER && data < Number.MAX_SAFE_INTEGER) {
+		// ok
+		return
+	}
+
+	throw errors.BAD_DATA
 }

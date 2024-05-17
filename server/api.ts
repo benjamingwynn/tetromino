@@ -5,7 +5,7 @@ import type {GameLog} from "src/game/Game.ts"
 import {replay} from "./simulator.ts"
 import {errors} from "util/errors.ts"
 import {Scoreboard, addToScoreboard, calculateScoreboardPosition, getScoreboard} from "./scoreboard.ts"
-import {assertValid} from "./validate.ts"
+import {assertRunID, assertValid} from "./validate.ts"
 import {addToRuns, getRunAtIndex} from "./runs.ts"
 import {censorUsername} from "./censor.ts"
 import semver from "semver"
@@ -21,6 +21,7 @@ async function list() {
 
 /** fetch replay info for a specific run */
 async function get(id: number) {
+	assertRunID(id)
 	const run = await getRunAtIndex(id)
 	if (semver.satisfies(run.version, "<0.0.15")) {
 		throw errors.RUN_TOO_OLD
