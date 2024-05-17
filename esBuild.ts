@@ -16,6 +16,8 @@ const serviceWorkers = await stage("Build service workers", () => buildServiceWo
 const toInject = await stage("Build service worker registrar", () => buildServiceWorkerRegistrar(serviceWorkers))
 // 4. inject the sw reg program into the output main html
 await stage("Add service worker registrar to HTML", () => injectScriptIntoDistHtml(toInject))
+// 5. esbuild-plugin-html unfortunately does not understand the social media meta tags, so copy over assets we need for them
+await stage("Copy meta assets", () => copyMeta())
 
 async function cleanup() {
 	const buildOptions = makeBuildOptions(false)
@@ -71,4 +73,9 @@ async function buildMainProgram() {
 	})
 
 	return Object.keys(ctx.metafile?.outputs ?? []).map((x) => "/" + path.relative(buildOptions.outdir, x))
+}
+
+async function copyMeta() {
+	await fsp.cp("src/meta", "dist/meta", {recursive: true})
+	//
 }
