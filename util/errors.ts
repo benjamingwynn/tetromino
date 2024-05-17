@@ -6,6 +6,7 @@ export const errors = {
 	CONNECTION_ERROR: "could not connect to the leaderboard server",
 	SCORE_MISMATCH: "could not validate your score",
 	BAD_DATA: "the server did not accept the data",
+	MISSING_DATA: "the server did not accept the data",
 	SUBMISSION_DROPPED: "your score did not make the leaderboard",
 	BAD_USERNAME: "your username is invalid",
 	TOO_MUCH_DATA: "the server couldn't handle your entire submission",

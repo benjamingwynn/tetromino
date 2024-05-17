@@ -39,7 +39,7 @@ async function get(id: number) {
  * Throws errors if any parameters are invalid or if the game log and seed did not simulate to the same score.
  */
 async function validate(this: void, clientVersion: string, submission: Submission): Promise<number | false> {
-	assertValid({clientVersion, submission})
+	assertValid({clientVersion, submission}, ["clientVersion", "submission"])
 
 	const success = replay(submission.seed, submission.score, submission.ticks, submission.log)
 	if (!success) {
@@ -56,7 +56,7 @@ async function validate(this: void, clientVersion: string, submission: Submissio
  */
 async function submit(this: void, clientVersion: string, submission: Submission, username: string) {
 	// check data is valid first
-	assertValid({clientVersion, submission, username})
+	assertValid({clientVersion, submission, username}, ["clientVersion", "submission", "username"])
 
 	// re-check this to make sure someone didn't skip the validate step
 	if (!(await validate(version, submission))) {
