@@ -5,7 +5,7 @@ import semver from "semver"
 
 /** returns boolean if successful */
 function simulate(game: Game, expectedScore: number, max: number, log: GameLog) {
-	const success = game.replay(log, max)
+	const success = game.simulate(log, max)
 	const theScore = game.getScore()
 	let ok = false
 	if (success && expectedScore === theScore) {

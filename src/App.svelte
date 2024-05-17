@@ -30,34 +30,6 @@
 	let lockTouchRetry = false
 	let showTouchSettings = false
 
-	const validateLocalReplay = () => {
-		const game2 = new Game({
-			canvas: altCanvas,
-			enableAudio: false,
-			seed: game.seed,
-		})
-		const success = game2.replay(game.gameLog, game.getTicks())
-		const score = game2.getScore()
-		if (success && score === _score) {
-			console.log("**** SUCCESS!! ****")
-			// canvas.style.borderColor = "green"
-			altCanvas.style.borderColor = "green"
-		} else if (!success && score === _score) {
-			console.warn("**** NON-SUCCESS BUT MATCHING SCORE!! ****")
-			canvas.style.borderColor = "orange"
-			altCanvas.style.borderColor = "orange"
-		} else {
-			console.error("**** FAILURE!! ****")
-			canvas.style.borderColor = "red"
-			altCanvas.style.borderColor = "red"
-			altCanvas.hidden = false
-		}
-		// console.log("game2=", game2)
-		requestAnimationFrame(() => {
-			game2.destroy()
-		})
-	}
-
 	const newGame = () => {
 		// altCanvas.hidden = true
 		touchSubmitScoreStage2 = false
@@ -86,9 +58,6 @@
 					setTimeout(() => {
 						lockTouchRetry = false
 					}, 3000)
-
-					// validate the game locally
-					validateLocalReplay()
 				}
 
 				_gameOver = gameOver

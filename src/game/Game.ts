@@ -1,21 +1,11 @@
 /** @format */
 
 import {noop, sleep} from "util/util.ts"
+import {hsl} from "util/hsl.ts"
 import RandomNumberGenerator from "mersenne-twister"
 import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./tetrominoes.ts"
 import {setInterval, clearInterval} from "./frameSetInterval.ts"
 // import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./debug_tetrominoes.ts"
-
-const hslCache = new WeakMap<number[], string>()
-function hsl(stuff: number[]) {
-	const cached = hslCache.get(stuff)
-	if (cached) {
-		return cached
-	}
-	const rtn = `hsl(${stuff.map((x, i) => (i > 0 ? x + "%" : x)).join(" ")})`
-	hslCache.set(stuff, rtn)
-	return rtn
-}
 
 type Tetromino = {
 	type: TetrominoType
@@ -25,6 +15,21 @@ type Tetromino = {
 	yOrigin: number
 	/** rotation/alternate shape number */
 	rot: number
+}
+
+type Playback = {
+	nextFrame?: number
+	log: GameLog
+	max: number
+	duration: number
+	startTime: number
+	timeSpentAnimating: number
+	done: () => void
+	reject: () => void
+	lastPauseTime?: number
+	timeSpentPaused: number
+	/** if true, whether when this playback finishes it'll start again */
+	loop: boolean
 }
 
 /**
@@ -40,30 +45,32 @@ export type GameLog = Record<number, LoggedMove[]>
 export const MAX_MOVES_PER_TICK = 4
 
 export class Game {
-	private ctx: CanvasRenderingContext2D
-
+	/**
+	 * The number of rows in cells the game should take up, the height of the game.
+	 * Please note that this should fit evenly into your canvas height, or you may encounter collision problems.
+	 */
 	private rows = 20
+	/**
+	 * The number of columns in cells the game should take up, the width of the game.
+	 * Please note that this should fit evenly into your canvas width, or you may encounter collision problems.
+	 */
 	private columns = 10
-	private nextFrame?: number
-	public muteSounds = false
 
+	/**
+	 * The width/height of cells in pixels.
+	 * This is determined automatically based on the size of the `canvas`
+	 */
+	private cellRenderSize!: number
+
+	/** The seed */
 	public seed: number
 
 	/**
 	 * The grid of placed items.
+	 * This is an array of arrays, an array of rows. Each row contains either a number pointing to the index of `this.colors`, or `undefined`/`null` if it's not to be drawn.
 	 * **ATTENTION: this is stored bottom-to-top, this may be the opposite of what you're expecting!**
 	 */
-	public grid: number[][] = [
-		// [1, 4, 1, 1, 1, 1, 1, 1, 7, 3],
-		// [3, 2, 3, 4, 5, 6, 7, 1, 5, 1],
-		// [4, 6, 1, 1, 2, 1, 1, 4, 1, 6],
-		// [6, 1, 3, 2, 3, 4, 5, 6, 7, 1],
-		// [1, 2, 1, 5, 3, 1, 5, 4, 3, 5],
-		// [0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-		// [0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-		// [0, 0, 1, 1, 3, 1, 1, 1, 1, 1],
-	]
-	private size!: number
+	public grid: number[][] = []
 
 	/** array of [h,s,l] */
 	private colors = [
@@ -77,30 +84,134 @@ export class Game {
 		[255, 90, 60], // Z
 	]
 
-	/**
-	 * [
-	 * 0: type,
-	 * 1: distance from left,
-	 * 2: distance from top,
-	 * 3: rotation state
-	 * ]
-	 */
+	/** the shape we're dropping, if any. if we don't have a shape we'll get one depending on `tickLostTetromino` and `giveTetrominoInterval` */
 	private tetromino?: Tetromino
 
+	/** optional audio context, if defined we can make sounds as long as `muteSounds` is `false`. */
 	private audioCtx?: AudioContext
+
+	/** If true, sounds will not be played via the `audioCtx` */
+	public muteSounds = false
+
+	/** this gain node prevents clipping and lowers the volume of game sounds */
 	private oscillatorGainNode?: GainNode
-	private previewCtx?: CanvasRenderingContext2D
-	private tickInterval?: ReturnType<typeof setInterval>
+	/** `setInterval` result for the next game tick */
+	private tickInterval?: number
+	/** when we expect the next tick to be (in ms) */
 	private expectedNextTickTime?: number
+	/** number of ms we're behind our expected next tick time */
 	private tickMsBehind?: number
 	private tickMsBehindMin?: number
 	private tickMsBehindMax?: number
 
+	/** If defined, the game will be drawn onto the canvas. */
 	private canvas?: HTMLCanvasElement = undefined
+	private ctx?: CanvasRenderingContext2D
+
+	/** This holds the number of the requested animation frame for a redraw of the `canvas` */
+	private nextFrame?: number
+
+	/** If defined, whenever the next tetromino is   */
 	private previewCanvas?: HTMLCanvasElement = undefined
+	private previewCtx?: CanvasRenderingContext2D
+
+	/** Hook onto updates for the GUI */
 	public onUpdate: (data: {score: number; gameOver: boolean}) => void = noop
 
+	/** This is the pseudo random number generator. It defines what tetromino comes next. When this is recreated with the same seed it'll produce the same sequence of numbers. */
 	private randomGenerator: RandomNumberGenerator
+
+	/** If defined then we are running the score animation. */
+	private scoreAnimationPromise?: Promise<void>
+	/** If defined then we are running the lose animation. */
+	public loseAnimationPromise?: Promise<void>
+
+	/** If defined then a playback is currently in progress */
+	private playbackInProgress?: Playback
+
+	/** wait this many ticks before restarting playback if looping */
+	private playbackLoopGap = 1
+
+	/** start `stepInterval` at this number. this is the number of ticks until dropping the players held tetromino by 1 space */
+	private startStepInterval = 50
+	/** current ticks/step to fire the step interval */
+	private stepInterval = this.startStepInterval
+	/** last tick that the step interval was fired */
+	private lastStep = 0
+	/** keep lowering the step interval until it reaches this number (ticks/step) */
+	private minStepInterval = 6
+
+	/**
+	 * when the player hits this score, switch to the `endgameStepInterval`
+	 * a good player will usually hit 10k in 10min, so this should make the game
+	 * significantly harder after 20 min
+	 */
+	private endgameStartsAt = 20_000
+	private endgameStepInterval = 3
+
+	/** after this score, try to kill the player */
+	private killScreenStartsAt = 100_000
+	private killScreenStepInterval = 1
+
+	/** give a tetromino to the player when we lost it this many ticks ago (or more)  */
+	private giveTetrominoInterval = 13
+
+	/** time we placed the last tetromino */
+	private tickLostTetromino: number = 0
+	/**
+	 * how the score decreases the score
+	 * effectively determines the length of the game until hitting the `minStepInterval`
+	 *
+	 * 125 = ~10 min
+	 * 250 = ~20 min
+	 */
+	private easiness = 250
+	/** if true, the game is paused. do not fire ticks and disallow player input */
+	public paused = false
+	/** if true, the game is over. When this changes `onUpdate` will fire. */
+	private gameOver = false
+	/** the current score. When this changes `onUpdate` will fire. */
+	private score = 0
+
+	/** [0: row number, 1: start time] */
+	private animateRow?: [number, number]
+
+	/** the base time for `animationDuration` */
+	private animationDurationBase = 500
+	/** how long the animation should be running for, this will be made smaller after scoring points in a row */
+	private animationDuration = this.animationDurationBase
+	/** the last x position of a dropped tetromino */
+	private lastX = 0
+	/** whether to draw debug information on the screen */
+	private drawDebug = false
+	/** the number of tetrominoes the player has been given */
+	private giveCount = 0
+	/** the moves the player has made this tick */
+	private moveLog: LoggedMove[] = []
+	/** the moves the player has made throughout the entire game */
+	public gameLog: GameLog = {}
+
+	/** whether to animate scoring and losing, which async blocks the game from ticking */
+	private enableAsyncAnimations = false
+
+	/** debug boxes to draw on th is frame (if `drawDebug` is true) */
+	private debugBoxes: {stroke: string; x: number; y: number}[] = []
+
+	/** The next tetromino to spawn when ready, when this is changed `previewCtx` will be updated (if it's available)  */
+	private nextTetrominoType!: TetrominoType
+
+	/** The number of ticks processed by the game. */
+	private tickCounter = 0
+
+	/** public getter for getting the number of ticks passed in the game. */
+	public getTicks() {
+		return this.tickCounter
+	}
+
+	/** public getter for getting the score of the game. */
+	public getScore() {
+		return this.score
+	}
 
 	constructor({
 		canvas,
@@ -156,7 +267,6 @@ export class Game {
 				this.oscillatorGainNode.gain.value = 0.2
 				this.oscillatorGainNode.connect(this.audioCtx.destination)
 			} catch {
-				// meh
 				console.error("Sound is not available in this browser.")
 			}
 		}
@@ -182,10 +292,6 @@ export class Game {
 		this.paused = false
 		this.enableAsyncAnimations = true
 
-		// BODGE THIS BACK TO 0 SO WE ONLY COUNT SKIPPED FRAMES FOR *THIS* GAME
-		// NOTE: this will be removed when the debug print for _totalSkippedFrameIntervals is removed
-		globalThis._totalSkippedFrameIntervals = 0
-
 		this.tickInterval = setInterval(() => {
 			const now = Date.now()
 			if (this.expectedNextTickTime) {
@@ -200,34 +306,51 @@ export class Game {
 		}, 20)
 	}
 
-	private scoreAnimationPromise?: Promise<void>
-	public loseAnimationPromise?: Promise<void>
-
-	private playbackInProgress?: {
-		nextFrame?: number
-		log: GameLog
-		max: number
-		duration: number
-		startTime: number
-		timeSpentAnimating: number
-		done: () => void
-		reject: () => void
-		assertRunning: () => boolean
-		lastPauseTime?: number
-		timeSpentPaused: number
-		loop: boolean
+	/** resets *this* game, reusing the same seed and starting the game from the beginning. Note that this doesn't recreate a new game, to do that we construct a new Game() with a new seed instead. */
+	private reset() {
+		if (this.loseAnimationPromise || this.scoreAnimationPromise) {
+			console.warn("Running an animation while asked to reset!")
+		}
+		if (this.tickInterval) {
+			console.warn("reset() stopped running tickInterval")
+			clearInterval(this.tickInterval)
+			this.expectedNextTickTime = undefined
+			this.tickMsBehind = undefined
+			this.tickMsBehindMax = undefined
+			this.tickMsBehindMin = undefined
+			this.tickInterval = undefined
+		}
+		this.tetromino = undefined
+		// recreate the RNG
+		this.randomGenerator = new RandomNumberGenerator(this.seed)
+		this.tickCounter = 0
+		this.grid = []
+		this.gameLog = []
+		this.moveLog = []
+		this.giveCount = 0
+		this.paused = false
+		this.gameOver = false
+		this.stepInterval = this.startStepInterval
+		this.tickLostTetromino = 0
+		this.lastX = 0
+		this.lastStep = 0
+		this.score = 0
+		this.scoreAnimationPromise = undefined
+		this.loseAnimationPromise = undefined
+		this.nextTetrominoType = this.getNextTetrominoType()
+		// reset playback if applicable
+		if (this.playbackInProgress) {
+			this.playbackInProgress.startTime = Date.now()
+			this.playbackInProgress.timeSpentAnimating = 0
+			this.playbackInProgress.timeSpentPaused = 0
+		}
+		this.onUpdate({score: 0, gameOver: false})
 	}
-
-	private playbackLoopGap = 1
 
 	private playbackFrame = () => {
 		// if (!playback) return
 		;(async () => {
-			//
-			//
-			// TODO: FIX THIS SO IT WORKS WITH PLAY/PAUSE PROPERLY
-			//
-			//
+			// TODO: FIXME: Some of the timings here are incorrect. When the game is played/paused or when animating this math is incorrect.
 
 			// playback.nextFrame = undefined
 			const playback = this.playbackInProgress
@@ -294,54 +417,9 @@ export class Game {
 					}
 				} else {
 					playback.nextFrame = requestAnimationFrame(this.playbackFrame)
-					// } else if (ticksBehind && playback.assertRunning()) {
-					// 	playback.nextFrame = requestAnimationFrame(this.playbackFrame)
-					// } else {
-					// 	console.warn("bailing from playback frame loop")
 				}
 			}
 		})() /*.catch(console.error)*/
-	}
-
-	private reset() {
-		// if (this.playbackInProgress) throw new Error("cannot reset while playback in progress")
-		if (this.loseAnimationPromise || this.scoreAnimationPromise) {
-			console.error("running animation while asked to reset :(")
-		}
-		if (this.tickInterval) {
-			console.warn("reset() stopped running tickInterval")
-			clearInterval(this.tickInterval)
-			this.expectedNextTickTime = undefined
-			this.tickMsBehind = undefined
-			this.tickMsBehindMax = undefined
-			this.tickMsBehindMin = undefined
-			this.tickInterval = undefined
-		}
-		this.tetromino = undefined
-		// recreate the RNG
-		this.randomGenerator = new RandomNumberGenerator(this.seed)
-		this.tickCounter = 0
-		this.grid = []
-		this.gameLog = []
-		this.moveLog = []
-		this.giveCount = 0
-		this.paused = false
-		this.gameOver = false
-		this.stepInterval = this.startStepInterval
-		this.tickLostTetromino = 0
-		this.lastX = 0
-		this.lastStep = 0
-		this.score = 0
-		this.scoreAnimationPromise = undefined
-		this.loseAnimationPromise = undefined
-		this.nextTetrominoType = this.getNextTetrominoType()
-		// reset playback if applicable
-		if (this.playbackInProgress) {
-			this.playbackInProgress.startTime = Date.now()
-			this.playbackInProgress.timeSpentAnimating = 0
-			this.playbackInProgress.timeSpentPaused = 0
-		}
-		this.onUpdate({score: 0, gameOver: false})
 	}
 
 	/**
@@ -370,7 +448,6 @@ export class Game {
 						resolve()
 					},
 					reject: () => reject(new Error("playback bailed early")),
-					assertRunning: () => true,
 					loop,
 				}
 				this.reset()
@@ -414,8 +491,11 @@ export class Game {
 		this.tick()
 	}
 
-	/** returns `true` if terminate with game over, `false` if terminated early */
-	public replay(log: GameLog, max: number): boolean {
+	/**
+	 * Simulates the game with the GameLog provided.
+	 * Returns `true` if terminate with game over, `false` if terminated early.
+	 */
+	public simulate(log: GameLog, max: number): boolean {
 		const t = performance.now()
 		// this.enableAsyncAnimatedScoring = false
 		let n = 0
@@ -459,16 +539,18 @@ export class Game {
 			oscillator.start(audioCtx.currentTime + msDelay / 1000)
 			oscillator.stop(audioCtx.currentTime + msDelay / 1000 + msDuration / 1000)
 		} catch {
-			// meh
+			// (ignore sound errors)
 		}
 	}
 
 	private layout() {
 		if (!this.canvas) throw new Error("layout() fired without this.canvas available.")
-		this.size = Math.min(this.canvas.width, this.canvas.height) / this.columns
+		this.cellRenderSize = Math.min(this.canvas.width, this.canvas.height) / this.columns
 	}
 
 	private drawCell(x: number, y: number, colorIndex: number) {
+		if (!this.ctx) throw new Error("drawCell() fired without this.ctx available.")
+
 		let [h, s, l] = this.colors[colorIndex]
 		if (this.animateRow && this.animateRow[0] === y) {
 			//
@@ -486,7 +568,7 @@ export class Game {
 		}
 		this.ctx.fillStyle = hsl([h, s, l])
 
-		const size = this.size
+		const size = this.cellRenderSize
 		this.ctx.fillRect((x + 0) * size, y * size, size, size)
 
 		if (size >= 5) {
@@ -496,54 +578,6 @@ export class Game {
 		}
 	}
 
-	private lastStep = 0
-	private minStepInterval = 6
-	/**
-	 * when the player hits this score, switch to the `endgameStepInterval`
-	 * a good player will usually hit 10k in 10min, so this should make the game
-	 * significantly harder after 20 min
-	 */
-	private endgameStartsAt = 20_000
-	private endgameStepInterval = 3
-
-	/** after this score, try to kill the player */
-	private killScreenStartsAt = 100_000
-	private killScreenStepInterval = 1
-
-	private startStepInterval = 50
-	private stepInterval = this.startStepInterval
-	private giveTetrominoInterval = 13
-	private tickLostTetromino: number = 0
-	/**
-	 * how the score decreases the score
-	 * effectively determines the length of the game until hitting the `minStepInterval`
-	 *
-	 * 125 = ~10 min
-	 * 250 = ~20 min
-	 */
-	private easiness = 250
-	public paused = false
-	private gameOver = false
-	private score = 0
-
-	public getScore() {
-		return this.score
-	}
-
-	/** [0: row number, 1: start time] */
-	private animateRow?: [number, number]
-	private animationDurationBase = 500
-	private animationDuration = this.animationDurationBase
-	private lastX = 0
-	private drawDebug = false
-	private giveCount = 0
-	private moveLog: LoggedMove[] = []
-	public gameLog: GameLog = {}
-
-	private pushToMoveLog(move: LoggedMove) {
-		this.moveLog.push(move)
-	}
-
 	private compressGameLog() {
 		const entries = Object.entries(this.gameLog)
 		const filtered = entries.filter(([key, val]) => val.length)
@@ -551,108 +585,106 @@ export class Game {
 		// console.log("game log compression removed entries:", entries.length - filtered.length)
 	}
 
-	private enableAsyncAnimations = false
-
+	/** fires whenever the shape/tetromino you're holding should move downwards, determined by `stepInterval` */
 	private step = () => {
 		// get the falling shape, if we have one
 		const tetromino = this.tetromino
-		if (tetromino) {
-			const {type, xOrigin, yOrigin, rot} = tetromino
+		if (!tetromino) {
+			return
+		}
+		const {type, xOrigin, yOrigin, rot} = tetromino
 
-			const onCollision = () => {
-				const bitmap = tetrominoes[type][rot]
-				// that's a collision, add this to the grid
-				this.lastX = tetromino.xOrigin
-				this.tetromino = undefined
-				this.tickLostTetromino = this.tickCounter // <- this will cause us to get a new tetromino from the queue
+		const onCollision = () => {
+			const bitmap = tetrominoes[type][rot]
+			// that's a collision, add this to the grid
+			this.lastX = tetromino.xOrigin
+			this.tetromino = undefined
+			this.tickLostTetromino = this.tickCounter // <- this will cause us to get a new tetromino from the queue
 
-				this.soundBeep(yOrigin, 0, 50)
+			this.soundBeep(yOrigin, 0, 50)
 
-				// fill in the grid with the bitmap of the tetromino, remember the grid is stored bottom-to-top
-				for (let bY = 0; bY < bitmap.length; bY++) {
-					const row = bitmap[bY]
-					for (let bX = 0; bX < row.length; bX++) {
-						const fill = row[bX]
-						if (fill) {
-							const placeX = bX + xOrigin
-							const placeY = this.rows - (yOrigin + bY) - 1
-							if (!this.grid[placeY]) this.grid[placeY] = []
-							const color = tetrominoIndices[type] + 1
-							this.grid[placeY][placeX] = color
-						}
+			// fill in the grid with the bitmap of the tetromino, remember the grid is stored bottom-to-top
+			for (let bY = 0; bY < bitmap.length; bY++) {
+				const row = bitmap[bY]
+				for (let bX = 0; bX < row.length; bX++) {
+					const fill = row[bX]
+					if (fill) {
+						const placeX = bX + xOrigin
+						const placeY = this.rows - (yOrigin + bY) - 1
+						if (!this.grid[placeY]) this.grid[placeY] = []
+						const color = tetrominoIndices[type] + 1
+						this.grid[placeY][placeX] = color
 					}
 				}
+			}
 
-				// the lose condition:
-				if (this.grid.length > this.rows) {
-					this.playerLose()
-					return
-				}
+			// the lose condition:
+			if (this.grid.length > this.rows) {
+				this.playerLose()
+				return
+			}
 
-				// score points:
-				const SCORE_BASE = 100
-				const SCORE_MULTIPLIER = 0.5 // + 50% for every line in-a-row
-				if (this.enableAsyncAnimations) {
-					this.scoreAnimationPromise = (async () => {
-						let multiplier = 1
-						let count = 0
-						for (let i = 0; i < this.grid.length; i++) {
-							if (this.grid[i].filter((x) => x).length === this.columns) {
-								this.animateRow = [this.rows - i - 1, Date.now()]
-
-								this.animationDuration = Math.max(24, this.animationDurationBase / multiplier)
-
-								// make the sounds for this row
-								const soundLength = this.animationDuration / this.columns
-								for (let x = 0; x < this.columns; x++) {
-									this.soundBeep(x, soundLength * x, soundLength, count)
-								}
-
-								// wait a little while
-								await sleep(this.animationDuration)
-								if (!this.scoreAnimationPromise) return
-
-								this.animateRow = undefined
-								this.grid.splice(i, 1)
-								i-- // <- because we splice from the array we're searching, we need to fix the search index
-								count++
-								this.score += SCORE_BASE * multiplier
-								multiplier += SCORE_MULTIPLIER
-
-								this.onUpdate({score: this.score, gameOver: this.gameOver})
-							}
-						}
-					})().finally(() => {
-						this.scoreAnimationPromise = undefined
-					})
-				} else {
+			// score points:
+			const SCORE_BASE = 100
+			const SCORE_MULTIPLIER = 0.5 // + 50% for every line in-a-row
+			if (this.enableAsyncAnimations) {
+				this.scoreAnimationPromise = (async () => {
 					let multiplier = 1
 					let count = 0
 					for (let i = 0; i < this.grid.length; i++) {
 						if (this.grid[i].filter((x) => x).length === this.columns) {
+							this.animateRow = [this.rows - i - 1, Date.now()]
+
+							this.animationDuration = Math.max(24, this.animationDurationBase / multiplier)
+
+							// make the sounds for this row
+							const soundLength = this.animationDuration / this.columns
+							for (let x = 0; x < this.columns; x++) {
+								this.soundBeep(x, soundLength * x, soundLength, count)
+							}
+
+							// wait a little while
+							await sleep(this.animationDuration)
+							if (!this.scoreAnimationPromise) return
+
+							this.animateRow = undefined
 							this.grid.splice(i, 1)
 							i-- // <- because we splice from the array we're searching, we need to fix the search index
 							count++
 							this.score += SCORE_BASE * multiplier
 							multiplier += SCORE_MULTIPLIER
+
 							this.onUpdate({score: this.score, gameOver: this.gameOver})
 						}
 					}
+				})().finally(() => {
+					this.scoreAnimationPromise = undefined
+				})
+			} else {
+				let multiplier = 1
+				let count = 0
+				for (let i = 0; i < this.grid.length; i++) {
+					if (this.grid[i].filter((x) => x).length === this.columns) {
+						this.grid.splice(i, 1)
+						i-- // <- because we splice from the array we're searching, we need to fix the search index
+						count++
+						this.score += SCORE_BASE * multiplier
+						multiplier += SCORE_MULTIPLIER
+						this.onUpdate({score: this.score, gameOver: this.gameOver})
+					}
 				}
 			}
+		}
 
-			// see if we're in range of the grid
-			if (this.wouldTetrominoCollide(xOrigin + 0, yOrigin + 1, rot)) {
-				// if we're gonna hit a shape, add this to the grid
-				onCollision()
-			} else {
-				// move down by 1
-				tetromino.yOrigin += 1
-			}
+		// see if we're in range of the grid
+		if (this.wouldTetrominoCollide(xOrigin + 0, yOrigin + 1, rot)) {
+			// if we're gonna hit a shape, add this to the grid
+			onCollision()
+		} else {
+			// move down by 1
+			tetromino.yOrigin += 1
 		}
 	}
-
-	private debugBoxes: {stroke: string; x: number; y: number}[] = []
 
 	/** returns 1 for collide with grid, 2 for collide with floor */
 	private wouldTetrominoCollide = (x: number, y: number, rot: number) => {
@@ -701,14 +733,6 @@ export class Game {
 		return tetrominoKeys[Math.floor(random() * tetrominoKeys.length)] as TetrominoType
 	}
 
-	private nextTetrominoType!: TetrominoType
-
-	private tickCounter = 0
-
-	public getTicks() {
-		return this.tickCounter
-	}
-
 	public tick = () => {
 		if (this.paused) {
 			return
@@ -751,7 +775,7 @@ export class Game {
 							let [h, s, l] = this.colors[color]
 							this.previewCtx.fillStyle = hsl([h, s, l])
 
-							const size = this.size
+							const size = this.cellRenderSize
 							this.previewCtx.fillRect(j * size, i * size, size, size)
 
 							this.previewCtx.strokeStyle = hsl([h, s + 20, l - 20])
@@ -791,6 +815,7 @@ export class Game {
 	/** renders a single frame */
 	public renderFrame = () => {
 		if (!this.canvas) throw new Error("render() fired without this.canvas available.")
+		if (!this.ctx) throw new Error("render() fired without this.ctx available.")
 
 		this.nextFrame = undefined
 		this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
@@ -825,8 +850,6 @@ export class Game {
 			"Behind: " + this.tickMsBehind,
 			" Max: " + this.tickMsBehindMax,
 			" Min: " + this.tickMsBehindMin,
-			// hack in the _totalSkippedFrameIntervals so we can see it on mobile, we reset this to 0 when starting ticks on a game
-			" Skipped: " + window._totalSkippedFrameIntervals,
 			"Drawn: " + Date.now(),
 			this.animateRow?.join(",") ?? "-",
 		]
@@ -849,11 +872,11 @@ export class Game {
 
 		// draw debug boxes
 		if (this.drawDebug) {
-			this.debugBoxes.forEach((box) => {
+			for (const box of this.debugBoxes) {
 				this.ctx.lineWidth = 4
 				this.ctx.strokeStyle = box.stroke
-				this.ctx.strokeRect(box.x * this.size, box.y * this.size, this.size, this.size)
-			})
+				this.ctx.strokeRect(box.x * this.cellRenderSize, box.y * this.cellRenderSize, this.cellRenderSize, this.cellRenderSize)
+			}
 		}
 		this.debugBoxes = []
 
@@ -987,6 +1010,10 @@ export class Game {
 		const {type, rot} = tetromino
 
 		return this.columns - 1 - Math.max(...tetrominoes[type][rot].map((y) => y.findLastIndex((x) => x === 1)))
+	}
+
+	private pushToMoveLog(move: LoggedMove) {
+		this.moveLog.push(move)
 	}
 
 	/** @public */

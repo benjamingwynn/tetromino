@@ -14,19 +14,20 @@
 const openTimers: Record<number, {callback: () => void; interval: number; timeStarted: number; fireCount: number; skipCount: 0}> = {}
 let lastHandlerId = 1
 
-// NOTE: this is just a debug counter, we echo this onto the game's debug text and reset it back to 0. we won't be keeping this.
-globalThis._totalSkippedFrameIntervals = 0
+/**
+ * If we need to catch up this many ticks, do nothing instead.
+ * This prevents the game from running when the tab is inactive.
+ */
+const MAX_MISSED_TICKS = 15
 
 const frame = () => {
 	const now = Date.now()
 	for (const timer of Object.values(openTimers)) {
 		const diff = now - timer.timeStarted
 		const n = Math.floor(diff / timer.interval) - timer.fireCount - timer.skipCount
-		if (n >= 15) {
-			//   ^ what should this number be?
+		if (n >= MAX_MISSED_TICKS) {
 			timer.skipCount += n
 			console.warn("skipping", n, "setInterval callbacks")
-			globalThis._totalSkippedFrameIntervals += n
 		} else if (n >= 1) {
 			for (let i = 0; i < n; i++) {
 				timer.callback()
@@ -43,7 +44,7 @@ export function setInterval(callback: () => void, interval: number) {
 
 	const n = lastHandlerId++
 	openTimers[n] = {callback, interval, timeStarted: Date.now(), fireCount: 0, skipCount: 0}
-	return n as unknown as ReturnType<typeof globalThis.setInterval>
+	return n
 }
 
 export function clearInterval(handlerId: number) {
