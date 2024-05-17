@@ -414,7 +414,18 @@
 				{/if}
 			{/if}
 		</div>
-		<div class="about">
+		<a
+			class="about"
+			href="https://github.com/benjamingwynn/tetromino"
+			target="noopener"
+			tabindex="-1"
+			on:click={(ev) => {
+				if (showTouchControls) {
+					ev.preventDefault()
+					return
+				}
+			}}
+		>
 			<div class="about-inner">
 				{#if replay}
 					{@const sec = Math.floor((replay.ticks * 20) / 1000)}
@@ -425,14 +436,17 @@
 							.padStart(2, "0")} min {(sec % 60).toString().padStart(2, "0")} sec
 					</h3>
 				{:else}
-					<h2>{DEV ? "DEVELOPMENT BUILD" : "tetromino.app"}</h2>
+					<h2>{DEV ? "tetromino.app" : "tetromino.app"}</h2>
 					<h5>{fullVerString}</h5>
 					{#if !showTouchControls}
 						<h5>Move with A/D or left/right arrows, down/S to speed up, up/W/space to spin.</h5>
 					{/if}
 				{/if}
 			</div>
-		</div>
+		</a>
+		<a class="aboutFloat" href="https://github.com/benjamingwynn/tetromino" target="noopener" tabindex="-1">
+			<h4>Click to view the project on Github!</h4>
+		</a>
 	</main>
 
 	<div class="touchFloat left" hidden={!showTouchControls || _gameOver || !!replay}>
@@ -914,6 +928,45 @@
 		grid-column: 1 / span 4;
 		margin: auto;
 		text-align: center;
+		text-decoration: none;
+		outline: none;
+	}
+
+	.aboutFloat {
+		position: absolute;
+		display: flex;
+		justify-content: center;
+		bottom: 4rem;
+		right: 0;
+		left: 0;
+		cursor: pointer;
+		transition: all 0.2s;
+
+		&::after {
+			content: "";
+			width: 32rem;
+			height: 4rem;
+			position: absolute;
+			bottom: -3.5rem;
+			border: solid 2px orange;
+		}
+
+		h4 {
+			background: purple;
+			padding: 0.5em 1em;
+			font-size: 1.2em;
+			z-index: 1;
+		}
+		visibility: hidden;
+		opacity: 0;
+		transform: translateY(100%);
+	}
+
+	.about:hover + .aboutFloat,
+	.aboutFloat:hover {
+		visibility: visible;
+		opacity: 1;
+		transform: none;
 	}
 
 	@media (max-width: 639px) {
