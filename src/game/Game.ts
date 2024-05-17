@@ -984,6 +984,7 @@ export class Game {
 		// console.warn("\n\n** GAME.DESTROY **\n\n", this)
 		const playback = this.playbackInProgress
 		if (playback) {
+			console.log("stopping playback...")
 			if (playback.nextFrame) {
 				console.log("cancelled next playback frame", playback.nextFrame)
 				cancelAnimationFrame(playback.nextFrame)
@@ -992,8 +993,6 @@ export class Game {
 				playback.reject()
 			}
 			delete this.playbackInProgress
-		} else {
-			console.warn("this game has no playback in progress to cancel")
 		}
 		if (this.nextFrame) {
 			cancelAnimationFrame(this.nextFrame)
