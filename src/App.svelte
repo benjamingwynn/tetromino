@@ -641,13 +641,16 @@
 
 	<hr />
 	<fieldset>{aboutText}</fieldset>
-	<fieldset>
-		<a href="https://github.com/benjamingwynn/tetromino" target="_blank">
-			<span>view project on Github</span>
-			<span class="go">&gt;</span>
-		</a>
-	</fieldset>
-	<fieldset>{fullVerString}</fieldset>
+
+	{#if !showTouchControls}
+		<fieldset>
+			<a href="https://github.com/benjamingwynn/tetromino" target="_blank">
+				<span>view project on Github</span>
+				<span class="go">&gt;</span>
+			</a>
+		</fieldset>
+		<fieldset>{fullVerString}</fieldset>
+	{/if}
 </div>
 
 {#if showTouchControls}
