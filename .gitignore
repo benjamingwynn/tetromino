@@ -4,3 +4,4 @@ dist
 .esdev
 .data
 local
+.env

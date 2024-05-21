@@ -4,7 +4,7 @@ import {GameLog} from "src/game/Game.ts"
 import {datastore} from "./datastore.ts"
 import {getRunAtIndex} from "./runs.ts"
 import {generateGrid, replay} from "./simulator.ts"
-import {censorUsername} from "./censor.ts"
+import {censorFallthrough} from "./censorAI.ts"
 
 /** [score, runIndexID, time added (if recorded)] */
 type ScoreboardEntry = [number, number, number | undefined]
@@ -41,7 +41,7 @@ export async function getScoreboard(page = 0) {
 		}
 
 		const {username} = await getRunAtIndex(id)
-		rtn.push({score, id, username: censorUsername(username), grid})
+		rtn.push({score, id, username: await censorFallthrough(username), grid})
 	}
 
 	if (hadMissingDeathGrids) {

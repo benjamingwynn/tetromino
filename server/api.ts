@@ -7,8 +7,8 @@ import {errors} from "util/errors.ts"
 import {Scoreboard, addDeathGrid, addToScoreboard, calculateScoreboardPosition, getScoreboard} from "./scoreboard.ts"
 import {assertRunID, assertValid} from "./validate.ts"
 import {addToRuns, getRunAtIndex} from "./runs.ts"
-import {censorUsername} from "./censor.ts"
 import semver from "semver"
+import {censorFallthrough} from "./censorAI.ts"
 
 const {version} = packageJSON
 
@@ -27,7 +27,7 @@ async function get(id: number) {
 		throw errors.RUN_TOO_OLD
 	}
 	if (run) {
-		return {...run, username: censorUsername(run.username)}
+		return {...run, username: await censorFallthrough(run.username)}
 	} else {
 		throw errors.RUN_DOES_NOT_EXIST
 	}
