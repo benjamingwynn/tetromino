@@ -72,6 +72,10 @@ async function buildMainProgram() {
 		...buildOptions,
 	})
 
+	if (process.argv.includes("--meta")) {
+		await fsp.writeFile(path.join(buildOptions.outdir, ".meta.json"), JSON.stringify(ctx.metafile))
+	}
+
 	return Object.keys(ctx.metafile?.outputs ?? []).map((x) => "/" + path.relative(buildOptions.outdir, x))
 }
 

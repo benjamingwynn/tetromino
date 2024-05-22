@@ -8,6 +8,7 @@
 		"sim:prod": "pnpm run build && http-server -c-1 dist",
 		"build": "bests ./esBuild.ts",
 		"deploy": "pnpm version patch && git push && git push --tags && ./serverLocalDeploy.sh",
+		"analyze": "bests ./esBuild.ts --meta && esbuild-visualizer --open --metadata ./dist/.meta.json --filename ./dist/.stats.html",
 		"server": "bests --watch ./server/main.node.ts"
 	},
 	"engines": {
@@ -24,14 +25,15 @@
 		"deep-profanity-filter": "^2.3.3",
 		"esbuild": "^0.20.2",
 		"esbuild-svelte": "^0.8.0",
+		"esbuild-visualizer": "^0.6.0",
 		"htmlnano": "^2.1.1",
 		"less": "^4.2.0",
 		"mersenne-twister": "^1.1.0",
+		"openai": "^4.47.1",
 		"prettier-plugin-svelte": "^3.2.3",
 		"semver": "^7.6.0",
 		"svelte": "^4.2.15",
 		"svelte-preprocess": "^5.1.4",
-		"openai": "^4.47.1",
 		"typescript": "^5.4.5"
 	}
 }

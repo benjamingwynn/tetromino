@@ -20,6 +20,7 @@ export const makeBuildOptions = (dev: boolean, extra?: {define: BuildOptions["de
 		entryNames: "index",
 		chunkNames: "[ext]/[name]-[hash]",
 		bundle: true,
+		metafile: !dev,
 		loader: {
 			".ts": "ts",
 			".woff": "file",
