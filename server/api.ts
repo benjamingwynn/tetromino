@@ -5,9 +5,9 @@ import type {GameLog} from "src/game/Game.ts"
 import {replay} from "./simulator.ts"
 import {errors} from "util/errors.ts"
 import {Scoreboard, addDeathGrid, addToScoreboard, calculateScoreboardPosition, getScoreboard} from "./scoreboard.ts"
-import {assertRunID, assertValid} from "./validate.ts"
+import {assertRunID, assertValid} from "./assert.ts"
 import {addToRuns, getRunAtIndex} from "./runs.ts"
-import semver from "semver"
+import * as semver from "semver"
 import {censorFallthrough} from "./censorAI.ts"
 
 const {version} = packageJSON

@@ -1,7 +1,7 @@
 /** @format */
 
 import {Game, GameLog} from "src/game/Game.ts"
-import semver from "semver"
+import * as semver from "semver"
 
 /** returns boolean if successful */
 function simulate(game: Game, expectedScore: number, max: number, log: GameLog) {
