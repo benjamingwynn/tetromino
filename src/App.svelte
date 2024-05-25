@@ -444,9 +444,11 @@
 				{/if}
 			</div>
 		</a>
-		<a class="aboutFloat" href="https://github.com/benjamingwynn/tetromino" target="noopener" tabindex="-1">
-			<h4>Click to view the project on Github!</h4>
-		</a>
+		{#if !showTouchControls}
+			<a class="aboutFloat" href="https://github.com/benjamingwynn/tetromino" target="noopener" tabindex="-1">
+				<h4>Click to view the project on Github!</h4>
+			</a>
+		{/if}
 	</main>
 
 	<div class="touchFloat left" hidden={!showTouchControls || _gameOver || !!replay}>
@@ -642,15 +644,13 @@
 	<hr />
 	<fieldset>{aboutText}</fieldset>
 
-	{#if !showTouchControls}
-		<fieldset>
-			<a href="https://github.com/benjamingwynn/tetromino" target="_blank">
-				<span>view project on Github</span>
-				<span class="go">&gt;</span>
-			</a>
-		</fieldset>
-		<fieldset>{fullVerString}</fieldset>
-	{/if}
+	<fieldset>
+		<a href="https://github.com/benjamingwynn/tetromino" target="_blank">
+			<span>view project on Github</span>
+			<span class="go">&gt;</span>
+		</a>
+	</fieldset>
+	<fieldset>{fullVerString}</fieldset>
 </div>
 
 {#if showTouchControls}
