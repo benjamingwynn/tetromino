@@ -6,7 +6,7 @@ import {sleep} from "util/util.ts"
 
 const API_HOST = ["localhost", "workstation.local"].includes(location.hostname)
 	? `http://${location.hostname}:8000`
-	: `https://cfe1-137-220-119-228.ngrok-free.app`
+	: `https://79d2-137-220-119-228.ngrok-free.app`
 
 const minimumTime = 1_000
 
