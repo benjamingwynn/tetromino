@@ -4,9 +4,7 @@ import type {API} from "server/api.ts"
 import {errors} from "util/errors.ts"
 import {sleep} from "util/util.ts"
 
-const API_HOST = ["localhost", "workstation.local"].includes(location.hostname)
-	? `http://${location.hostname}:8000`
-	: `https://79d2-137-220-119-228.ngrok-free.app`
+const API_HOST = ["localhost", "workstation.local"].includes(location.hostname) ? `http://${location.hostname}:8000` : `https://tetromino-leaderboard.bmg.wtf`
 
 const minimumTime = 1_000
 
