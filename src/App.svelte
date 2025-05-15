@@ -14,6 +14,7 @@
 	import api from "./client/api"
 	import {StoredRun} from "server/runs"
 	import {noop} from "util/util"
+	import {afterSuspend} from "./onSuspend"
 
 	/** ignore inputs if the user paused the pause button this long ago (in ms) */
 	const ignoreInputAfterPause = 500
@@ -207,7 +208,13 @@
 		nextFrame = requestAnimationFrame(frame)
 		newGame()
 
+		// if the user suspends the app, they basically paused it
+		const disposer = afterSuspend(ignoreInputAfterPause, () => {
+			timeLastUnpaused = Date.now()
+		})
+
 		return () => {
+			disposer()
 			cancelAnimationFrame(nextFrame)
 			game.destroy()
 			if (nextTouchSpeedUp) clearTimeout(nextTouchSpeedUp)
