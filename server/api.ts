@@ -56,6 +56,8 @@ async function validate(this: void, clientVersion: string, submission: Submissio
  * Submit the high score with a username. This will revalidate.
  */
 async function submit(this: void, clientVersion: string, submission: Submission, username: string) {
+	console.log("**", username, "submitted", submission.score, "- which we are now validating...")
+
 	// check data is valid first
 	assertValid({clientVersion, submission, username}, ["clientVersion", "submission", "username"])
 
@@ -66,6 +68,7 @@ async function submit(this: void, clientVersion: string, submission: Submission,
 	}
 
 	// great, this is a valid run!
+	console.log("** success!", username, "is having their score of", submission.score, "added to the leaderboard")
 
 	// add the run
 	const id = await addToRuns({

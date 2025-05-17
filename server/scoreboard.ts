@@ -90,7 +90,6 @@ export async function calculateScoreboardPosition(score: number): Promise<number
 export async function addToScoreboard(score: number, id: number) {
 	const scores = await datastore("scoreboard", initScoreboard)
 	const entry: ScoreboardEntry = [score, id, Date.now()]
-	console.log("ADD ENTRY TO SCOREBOARD:", entry)
 
 	if (scores.length === 0) {
 		console.log("(there were no scores)")

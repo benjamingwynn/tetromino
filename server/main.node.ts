@@ -100,6 +100,7 @@ const handler = async (
 	} catch (err) {
 		// allow error strings to be sent to the user
 		if (typeof err === "string") {
+			console.log("WARNING: returned error:", err)
 			return {error: err}
 		} else {
 			throw err
