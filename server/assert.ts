@@ -5,6 +5,10 @@ import * as semver from "semver"
 import {Submission} from "./api.ts"
 import packageJSON from "../package.json" assert {type: "json"}
 import {isValidUsername, isValidSubmission} from "./validate.ts"
+import {generateSeedRange} from "src/game/seed.ts"
+
+/** maximum time after the game was started that it should be accepted for submission */
+const MAX_TIME_BEFORE_SUBMISSION = 60 * 60 * 3 // 3 hours
 
 /**
  * @format
@@ -38,6 +42,11 @@ export function assertValid(
 	if (typeof data.submission !== "undefined") {
 		if (!isValidSubmission(data.submission)) {
 			throw errors.BAD_DATA
+		}
+
+		const [minSeed, maxSeed] = generateSeedRange(MAX_TIME_BEFORE_SUBMISSION)
+		if (data.submission.seed < minSeed || data.submission.seed > maxSeed) {
+			throw errors.BAD_SEED
 		}
 	} else if (required.includes("submission")) {
 		throw errors.MISSING_DATA

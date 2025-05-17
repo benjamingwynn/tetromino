@@ -5,6 +5,7 @@ import {hsl} from "util/hsl.ts"
 import RandomNumberGenerator from "mersenne-twister"
 import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./tetrominoes.ts"
 import {setInterval, clearInterval} from "./frameSetInterval.ts"
+import {generateSeed} from "./seed.ts"
 // import {tetrominoes, tetrominoIndices, tetrominoKeys, TetrominoType} from "./debug_tetrominoes.ts"
 
 type Tetromino = {
@@ -249,7 +250,7 @@ export class Game {
 			this.previewCtx = previewCtx
 		}
 
-		this.seed = seed ?? Math.floor(Date.now() / 60_000)
+		this.seed = seed ?? generateSeed()
 		this.randomGenerator = new RandomNumberGenerator(this.seed)
 
 		// get the first tetromino type after we create the RNG
@@ -284,7 +285,7 @@ export class Game {
 	}
 
 	public getAndSetNewSeed() {
-		this.seed = Math.floor(Date.now() / 60_000)
+		this.seed = generateSeed()
 	}
 
 	/** Start the game regularly. Sets up the tick to happen at a human-playable speed */

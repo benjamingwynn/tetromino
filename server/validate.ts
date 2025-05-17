@@ -7,7 +7,6 @@ export const MAX_USERNAME_LENGTH = 16
 export const VALID_USERNAME_REGEX: RegExp = /^[a-zA-Z\s]+$/
 
 const MAX_TICKS = 100_000
-const MAX_SEED = 1_000_000_000
 
 /**
  * returns boolean if successful
@@ -21,8 +20,6 @@ export function isValidSubmission(obj: any): obj is Submission {
 	const rtn =
 		typeof obj === "object" &&
 		typeof obj.seed === "number" &&
-		obj.seed > 0 &&
-		obj.seed < MAX_SEED &&
 		typeof obj.score === "number" &&
 		obj.score >= 0 &&
 		obj.score < Number.MAX_SAFE_INTEGER &&
