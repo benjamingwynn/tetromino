@@ -47,11 +47,7 @@ export async function isWordAppropriate(word: string): Promise<boolean> {
 				],
 			},
 		],
-		temperature: 0.9,
 		max_tokens: 5,
-		top_p: 1,
-		frequency_penalty: 0,
-		presence_penalty: 0,
 	})
 
 	const result = response.choices.at(0)?.message.content?.toLowerCase()

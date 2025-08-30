@@ -47,7 +47,7 @@ export function setInterval(callback: () => void, interval: number) {
 	return n
 }
 
-export function clearInterval(handlerId: number) {
+export function clearInterval(handlerId: ReturnType<typeof setInterval>) {
 	if (!globalThis.window) return globalThis.clearInterval(handlerId)
 	if (handlerId === undefined) return
 	if (!(handlerId in openTimers)) console.warn(handlerId, "not in", openTimers)

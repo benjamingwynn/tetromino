@@ -20,7 +20,8 @@
 	const ignoreInputAfterPause = 500
 
 	const aboutText = `a competitive falling shape game written by Benjamin Gwynn`
-	const fullVerString = `v${version} [${BUILD.time.toString(16)}]`
+	const smallVerString = `v${version.split(".").at(-1)}`
+	const fullVerString = `${smallVerString} [${BUILD.time.toString(16)}]`
 
 	let canvas: HTMLCanvasElement
 	let altCanvas: HTMLCanvasElement
@@ -444,7 +445,7 @@
 					</h3>
 				{:else}
 					<h2>{DEV ? "tetromino.app" : "tetromino.app"}</h2>
-					<h5>{fullVerString}</h5>
+					<h5>{smallVerString}</h5>
 					{#if !showTouchControls}
 						<h5>Move with A/D or left/right arrows, down/S to speed up, up/W/space to spin.</h5>
 					{/if}
@@ -452,7 +453,7 @@
 			</div>
 		</a>
 		{#if !showTouchControls}
-			<a class="aboutFloat" href="https://github.com/benjamingwynn/tetromino" target="noopener" tabindex="-1">
+			<a class="aboutFloat" href="https://github.com/benjamingwynn/tetromino" target="noopener" tabindex="-1" title="{fullVerString}}">
 				<h4>Click to view the project on Github!</h4>
 			</a>
 		{/if}

@@ -97,7 +97,7 @@ export class Game {
 	/** this gain node prevents clipping and lowers the volume of game sounds */
 	private oscillatorGainNode?: GainNode
 	/** `setInterval` result for the next game tick */
-	private tickInterval?: number
+	private tickInterval?: ReturnType<typeof setInterval>
 	/** when we expect the next tick to be (in ms) */
 	private expectedNextTickTime?: number
 	/** number of ms we're behind our expected next tick time */
@@ -133,6 +133,12 @@ export class Game {
 	/** wait this many ticks before restarting playback if looping */
 	private playbackLoopGap = 1
 
+	/** how fast the game moves, in ms. changing this will affect other timings */
+	private tickSpeed = 1000 / 60
+
+	/** how 'easy' the game is, if its higher the game will speed up slower */
+	private scoreSpeedMultiplier = 20
+
 	/** start `stepInterval` at this number. this is the number of ticks until dropping the players held tetromino by 1 space */
 	private startStepInterval = 50
 	/** current ticks/step to fire the step interval */
@@ -140,33 +146,14 @@ export class Game {
 	/** last tick that the step interval was fired */
 	private lastStep = 0
 	/** keep lowering the step interval until it reaches this number (ticks/step) */
-	private minStepInterval = 6
-
-	/**
-	 * when the player hits this score, switch to the `endgameStepInterval`
-	 * a good player will usually hit 10k in 10min, so this should make the game
-	 * significantly harder after 20 min
-	 */
-	private endgameStartsAt = 20_000
-	private endgameStepInterval = 3
-
-	/** after this score, try to kill the player */
-	private killScreenStartsAt = 100_000
-	private killScreenStepInterval = 1
+	private minStepInterval = 1
 
 	/** give a tetromino to the player when we lost it this many ticks ago (or more)  */
 	private giveTetrominoInterval = 13
 
 	/** time we placed the last tetromino */
 	private tickLostTetromino: number = 0
-	/**
-	 * how the score decreases the score
-	 * effectively determines the length of the game until hitting the `minStepInterval`
-	 *
-	 * 125 = ~10 min
-	 * 250 = ~20 min
-	 */
-	private easiness = 250
+
 	/** if true, the game is paused. do not fire ticks and disallow player input */
 	public paused = false
 	/** if true, the game is over. When this changes `onUpdate` will fire. */
@@ -303,8 +290,8 @@ export class Game {
 				this.tickMsBehindMin = Math.min(this.tickMsBehindMin ?? Infinity, msBehind)
 			}
 			this.tick()
-			this.expectedNextTickTime = now + 20
-		}, 20)
+			this.expectedNextTickTime = now + this.tickSpeed
+		}, this.tickSpeed)
 	}
 
 	/** resets *this* game, reusing the same seed and starting the game from the beginning. Note that this doesn't recreate a new game, to do that we construct a new Game() with a new seed instead. */
@@ -795,17 +782,8 @@ export class Game {
 			this.tetromino = tetromino
 			this.giveCount++
 
-			// **speed up the game**
-			if (this.giveCount % 5 === 0) {
-				if (this.score >= this.killScreenStartsAt) {
-					this.stepInterval = this.killScreenStepInterval
-				} else if (this.score >= this.endgameStartsAt) {
-					this.stepInterval = this.endgameStepInterval
-				} else {
-					const s = Math.floor(this.startStepInterval - this.score / this.easiness)
-					this.stepInterval = Math.max(this.minStepInterval, s)
-				}
-			}
+			const s = Math.ceil(this.startStepInterval - Math.sqrt(this.score / this.scoreSpeedMultiplier))
+			this.stepInterval = Math.max(this.minStepInterval, s)
 		}
 		if (this.tickCounter >= this.lastStep + this.stepInterval) {
 			this.step()

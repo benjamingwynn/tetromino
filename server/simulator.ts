@@ -43,11 +43,10 @@ export function generateGrid(seed: number, score: number, max: number, log: Game
 		seed,
 	})
 
-	// before 0.0.15 the game had different timings
-	if (semver.satisfies(version, "<0.0.15")) {
-		console.log("using legacy game rules for grid generation")
-		game.minStepInterval = 3
-		game.easiness = 125
+	// before 0.0.31 the game had different timings
+	if (semver.satisfies(version, "<0.0.31")) {
+		game.destroy()
+		return null
 	}
 
 	const ok = simulate(game, score, max, log)

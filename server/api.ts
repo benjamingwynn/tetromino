@@ -23,7 +23,7 @@ async function list() {
 async function get(id: number) {
 	assertRunID(id)
 	const run = await getRunAtIndex(id)
-	if (semver.satisfies(run.version, "<0.0.15")) {
+	if (semver.satisfies(run.version, "<0.0.31")) {
 		throw errors.RUN_TOO_OLD
 	}
 	if (run) {
