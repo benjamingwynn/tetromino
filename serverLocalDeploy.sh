@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 rm -rf .esdev .data dist
 scp -r piweb.local:~/app/.data .
 rsync -r --progress --exclude=.git --exclude=node_modules . piweb.local:~/app
