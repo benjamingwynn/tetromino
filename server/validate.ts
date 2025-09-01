@@ -6,7 +6,7 @@ export const MAX_USERNAME_LENGTH = 16
 // username should only contain letters (a-z, A-Z) or spaces
 export const VALID_USERNAME_REGEX: RegExp = /^[a-zA-Z\s]+$/
 
-const MAX_TICKS = 100_000
+const MAX_TICKS = 1_000_000
 
 /**
  * returns boolean if successful
